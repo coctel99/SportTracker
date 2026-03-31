@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the local instance/ folder so the container uses the same DB as local dev
+      - ./instance:/app/instance
+    environment:
+      SPORT_TRACKER_SECRET_KEY: ${SPORT_TRACKER_SECRET_KEY}
+      SPORT_TRACKER_DEBUG: ${SPORT_TRACKER_DEBUG}
+      SPORT_TRACKER_DATABASE: /app/instance/sport_tracker.sqlite
+
+
