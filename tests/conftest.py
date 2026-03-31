@@ -41,11 +41,19 @@ def db(app):
         yield get_db()
 
 
-def register(client, email="u@example.com", password="secret12"):
+def register(
+    client, email="u@example.com", password="secret12", name="Test User", sex="male"
+):
     csrf_token = get_csrf_token(client, "/register")
     return client.post(
         "/register",
-        data={"email": email, "password": password, "csrf_token": csrf_token},
+        data={
+            "email": email,
+            "password": password,
+            "name": name,
+            "sex": sex,
+            "csrf_token": csrf_token,
+        },
         follow_redirects=True,
     )
 

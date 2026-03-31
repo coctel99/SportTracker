@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% block title %}Profile – Sport Tracker{% endblock %}
+{% block content %}
+
+<div class="mb-6 max-w-lg mx-auto">
+  <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
+  <p class="text-sm text-gray-500 mt-0.5">Your personal details</p>
+</div>
+
+<div class="space-y-5 max-w-lg mx-auto">
+
+  <!-- ── Account block ──────────────────────────────────────────────────── -->
+  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700">Account</h2>
+      <p class="text-xs text-gray-400 mt-0.5">Account information</p>
+    </div>
+    <div class="divide-y divide-gray-100">
+      <div class="flex items-center px-6 py-4 gap-4">
+        <span class="w-36 text-sm font-medium text-gray-500">Email</span>
+        <span class="text-sm text-gray-900">{{ user['email'] }}</span>
+      </div>
+
+      <!-- Password row -->
+      <div>
+        <!-- View state -->
+        <div id="pw-view" class="{{ 'hidden' if pw_open else 'flex' }} items-center px-6 py-4 gap-4">
+          <span class="w-36 text-sm font-medium text-gray-500">Password</span>
+          <span class="flex-1 text-sm text-gray-400 tracking-widest">••••••••</span>
+          <button id="btn-pw-edit" type="button"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
+                         text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+            </svg>
+            Change
+          </button>
+        </div>
+
+        <!-- Edit state (hidden by default) -->
+        <div id="pw-edit" class="{{ '' if pw_open else 'hidden' }} px-6 py-5 space-y-4">
+          <form id="pw-form" method="post"
+                action="{{ url_for('routes.change_password_view') }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="space-y-3">
+
+              <div>
+                <label for="current_password" class="block text-xs font-medium text-gray-500 mb-1.5">
+                  Current password
+                </label>
+                <input id="current_password" name="current_password" type="password" autocomplete="current-password"
+                       placeholder="••••••••"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+              </div>
+
+              <div>
+                <label for="new_password" class="block text-xs font-medium text-gray-500 mb-1.5">
+                  New password <span class="text-gray-400 font-normal">— min. 8 characters</span>
+                </label>
+                <input id="new_password" name="new_password" type="password" autocomplete="new-password"
+                       placeholder="••••••••"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+              </div>
+
+              <div>
+                <label for="confirm_password" class="block text-xs font-medium text-gray-500 mb-1.5">
+                  Confirm new password
+                </label>
+                <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password"
+                       placeholder="••••••••"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+              </div>
+
+              <p id="pw-error" class="hidden flex items-center gap-1.5 text-sm text-red-700">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+                <span id="pw-error-text"></span>
+              </p>
+
+              <div class="flex items-center gap-2 pt-1">
+                <button type="submit"
+                        class="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm
+                               hover:bg-indigo-700 transition active:scale-95">
+                  Save
+                </button>
+                <button id="btn-pw-cancel" type="button"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium
+                               text-gray-600 hover:bg-gray-50 transition active:scale-95">
+                  Cancel
+                </button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Personal details block ──────────────────────────────────────────── -->
+  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm">
+
+    <!-- Header row with Edit / Save / Cancel -->
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-700">Personal details</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Name, date of birth, weight</p>
+      </div>
+      <!-- View-mode button -->
+      <button id="btn-edit" type="button"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
+                     text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+        </svg>
+        Edit
+      </button>
+      <!-- Edit-mode buttons (hidden by default) -->
+      <div id="edit-actions" class="hidden items-center gap-2">
+        <button type="submit" form="profile-form"
+                class="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm
+                       hover:bg-indigo-700 transition active:scale-95">
+          Save
+        </button>
+        <button id="btn-cancel" type="button"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium
+                       text-gray-600 hover:bg-gray-50 transition active:scale-95">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- View mode -->
+    <div id="view-mode" class="divide-y divide-gray-100">
+      <div class="flex items-center px-6 py-4 gap-4">
+        <span class="w-36 text-sm font-medium text-gray-500">Full Name</span>
+        <span id="view-name" class="text-sm text-gray-900">{{ user['name'] or '—' }}</span>
+      </div>
+      <div class="flex items-center px-6 py-4 gap-4">
+        <span class="w-36 text-sm font-medium text-gray-500">Date of Birth</span>
+        <span id="view-dob" class="text-sm text-gray-900">{{ user['date_of_birth'] or '—' }}</span>
+      </div>
+      <div class="flex items-center px-6 py-4 gap-4">
+        <span class="w-36 text-sm font-medium text-gray-500">Weight</span>
+        <span id="view-weight" class="text-sm text-gray-900">
+          {% if user['weight'] %}{{ user['weight'] | round(1) }} kg{% else %}—{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- Edit mode (hidden by default) -->
+    <form id="profile-form" method="post" action="{{ url_for('routes.edit_profile') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div id="edit-mode" class="hidden divide-y divide-gray-100">
+
+        <!-- Name -->
+        <div class="px-6 py-4">
+          <label for="name" class="block text-xs font-medium text-gray-500 mb-1.5">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input id="name" name="name" type="text" autocomplete="name"
+                 value="{{ user['name'] or '' }}"
+                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                        text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                        focus:ring-2 focus:ring-indigo-200 transition">
+          <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            <span>Name is required.</span>
+          </p>
+        </div>
+
+        <!-- Date of Birth -->
+        <div class="px-6 py-4">
+          <label for="date_of_birth" class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-medium text-gray-500">Date of Birth</span>
+            <span class="text-xs font-normal text-gray-400">— optional</span>
+          </label>
+          <input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday"
+                 value="{{ user['date_of_birth'] or '' }}"
+                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                        {{ 'text-gray-900' if user['date_of_birth'] else 'text-gray-400' }} shadow-sm
+                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+                 onchange="this.classList.toggle('text-gray-400',!this.value);this.classList.toggle('text-gray-900',!!this.value)">
+        </div>
+
+        <!-- Weight -->
+        <div class="px-6 py-4">
+          <label for="weight" class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-medium text-gray-500">Weight</span>
+            <span class="text-xs font-normal text-gray-400">— optional</span>
+          </label>
+          <div class="relative">
+            <input id="weight" name="weight" type="number" min="1" max="500" step="0.1"
+                   placeholder="70"
+                   value="{{ user['weight'] or '' }}"
+                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm
+                          text-gray-900 placeholder:text-gray-400 shadow-sm
+                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-900">kg</span>
+          </div>
+        </div>
+
+      </div>
+    </form>
+
+  </div><!-- /personal details block -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Personal details inline edit ─────────────────────────────────────────
+  const btnEdit     = document.getElementById('btn-edit');
+  const btnCancel   = document.getElementById('btn-cancel');
+  const editActions = document.getElementById('edit-actions');
+  const viewMode    = document.getElementById('view-mode');
+  const editMode    = document.getElementById('edit-mode');
+  const form        = document.getElementById('profile-form');
+
+  let origName, origDob, origWeight;
+
+  function enterEditMode() {
+    origName   = document.getElementById('name').value;
+    origDob    = document.getElementById('date_of_birth').value;
+    origWeight = document.getElementById('weight').value;
+    viewMode.classList.add('hidden');
+    editMode.classList.remove('hidden');
+    btnEdit.classList.add('hidden');
+    editActions.classList.remove('hidden');
+    editActions.classList.add('flex');
+  }
+
+  function exitEditMode() {
+    viewMode.classList.remove('hidden');
+    editMode.classList.add('hidden');
+    btnEdit.classList.remove('hidden');
+    editActions.classList.add('hidden');
+    editActions.classList.remove('flex');
+    document.getElementById('name-error').classList.add('hidden');
+    document.getElementById('name').classList.remove('border-red-400');
+    document.getElementById('name').classList.add('border-gray-300');
+  }
+
+  btnEdit.addEventListener('click', enterEditMode);
+
+  btnCancel.addEventListener('click', () => {
+    document.getElementById('name').value = origName;
+    document.getElementById('date_of_birth').value = origDob;
+    document.getElementById('weight').value = origWeight;
+    const dob = document.getElementById('date_of_birth');
+    dob.classList.toggle('text-gray-400', !dob.value);
+    dob.classList.toggle('text-gray-900', !!dob.value);
+    exitEditMode();
+  });
+
+  form.addEventListener('submit', function (e) {
+    const nameInput = document.getElementById('name');
+    const nameError = document.getElementById('name-error');
+    if (!nameInput.value.trim()) {
+      nameError.classList.remove('hidden');
+      nameInput.classList.add('border-red-400');
+      nameInput.classList.remove('border-gray-300');
+      e.preventDefault();
+    } else {
+      nameError.classList.add('hidden');
+      nameInput.classList.remove('border-red-400');
+      nameInput.classList.add('border-gray-300');
+    }
+  });
+
+  // ── Password inline edit ─────────────────────────────────────────────────
+  const pwView      = document.getElementById('pw-view');
+  const pwEdit      = document.getElementById('pw-edit');
+  const btnPwEdit   = document.getElementById('btn-pw-edit');
+  const btnPwCancel = document.getElementById('btn-pw-cancel');
+  const pwForm      = document.getElementById('pw-form');
+  const pwError     = document.getElementById('pw-error');
+  const pwErrorText = document.getElementById('pw-error-text');
+
+  function showPwError(msg) {
+    pwErrorText.textContent = msg;
+    pwError.classList.remove('hidden');
+  }
+  function hidePwError() {
+    pwError.classList.add('hidden');
+  }
+
+  btnPwEdit.addEventListener('click', () => {
+    pwView.classList.add('hidden');
+    pwEdit.classList.remove('hidden');
+    document.getElementById('current_password').focus();
+  });
+
+  btnPwCancel.addEventListener('click', () => {
+    pwView.classList.remove('hidden');
+    pwEdit.classList.add('hidden');
+    pwForm.reset();
+    hidePwError();
+  });
+
+  pwForm.addEventListener('submit', function (e) {
+    const current = document.getElementById('current_password').value;
+    const newPw   = document.getElementById('new_password').value;
+    const confirm = document.getElementById('confirm_password').value;
+    if (!current || !newPw || !confirm) {
+      showPwError('All password fields are required.'); e.preventDefault(); return;
+    }
+    if (newPw.length < 8) {
+      showPwError('New password must be at least 8 characters.'); e.preventDefault(); return;
+    }
+    if (newPw !== confirm) {
+      showPwError('New passwords do not match.'); e.preventDefault(); return;
+    }
+    hidePwError();
+  });
+</script>
+{% endblock %}
+
+
+
+

@@ -20,6 +20,7 @@ from flask import (
 )
 
 from app.auth import login_required
+from app.auth.service import change_password
 from app.tracker.dashboard.queries import get_dashboard_stats
 from app.tracker.exercises.queries import (
     create_exercise,
@@ -373,3 +374,75 @@ def progress_data(exercise_id):
 @login_required
 def progress_overview():
     return jsonify(get_top_exercises_chart_data(g.user["id"]))
+
+
+# ── Profile ───────────────────────────────────────────────────────────────────
+
+
+@bp.route("/profile")
+@login_required
+def profile():
+    return render_template("profile.html", user=g.user, pw_open=False)
+
+
+@bp.route("/profile/edit", methods=("GET", "POST"))
+@login_required
+def edit_profile():
+    from app.db import get_db
+
+    user_id = g.user["id"]
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        date_of_birth = request.form.get("date_of_birth", "").strip()
+        raw_weight = request.form.get("weight", "").strip()
+
+        if not name:
+            flash("Name is required.", "error")
+            return render_template("profile.html", user=g.user, pw_open=False)
+
+        weight = None
+        if raw_weight:
+            try:
+                weight = float(raw_weight.replace(",", "."))
+                if weight <= 0:
+                    raise ValueError
+            except ValueError:
+                flash("Weight must be a positive number.", "error")
+                return render_template("profile.html", user=g.user, pw_open=False)
+
+        db = get_db()
+        db.execute(
+            "UPDATE users SET name = ?, date_of_birth = ?, weight = ? WHERE id = ?",
+            (name, date_of_birth or None, weight, user_id),
+        )
+        db.commit()
+        flash("Profile updated.", "success")
+        return redirect(url_for("routes.profile"))
+
+    return redirect(url_for("routes.profile"))
+
+
+@bp.route("/profile/change-password", methods=("POST",))
+@login_required
+def change_password_view():
+    current = request.form.get("current_password", "")
+    new = request.form.get("new_password", "")
+    confirm = request.form.get("confirm_password", "")
+
+    error = None
+    if not current or not new or not confirm:
+        error = "All password fields are required."
+    elif len(new) < 8:
+        error = "New password must be at least 8 characters."
+    elif new != confirm:
+        error = "New passwords do not match."
+    elif not change_password(g.user["id"], current, new):
+        error = "Current password is incorrect."
+
+    if error:
+        flash(error, "error")
+        return render_template("profile.html", user=g.user, pw_open=True)
+
+    flash("Password changed successfully.", "success")
+    return redirect(url_for("routes.profile"))

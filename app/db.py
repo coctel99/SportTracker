@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  name TEXT,
+  date_of_birth TEXT,
+  sex TEXT CHECK (sex IN ('male', 'female')),
+  weight REAL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -73,6 +77,25 @@ def close_db(_=None):
 def init_db():
     conn = get_db()
     conn.executescript(SCHEMA_SQL)
+    conn.commit()
+
+
+def migrate_db():
+    """Add any missing columns to existing tables (idempotent)."""
+    conn = get_db()
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    migrations = [
+        ("name", "ALTER TABLE users ADD COLUMN name TEXT"),
+        ("date_of_birth", "ALTER TABLE users ADD COLUMN date_of_birth TEXT"),
+        (
+            "sex",
+            "ALTER TABLE users ADD COLUMN sex TEXT CHECK (sex IN ('male', 'female'))",
+        ),
+        ("weight", "ALTER TABLE users ADD COLUMN weight REAL"),
+    ]
+    for col, sql in migrations:
+        if col not in existing:
+            conn.execute(sql)
     conn.commit()
 
 

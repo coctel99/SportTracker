@@ -1,6 +1,19 @@
 """Tests for session detail view and session deletion."""
 
+from datetime import date
+from unittest.mock import MagicMock, patch
+
 from tests.conftest import get_csrf_token, login, register
+
+FROZEN_DATE = "2026-01-01"
+FROZEN_DATE_OBJ = date(2026, 1, 1)
+
+
+def _patch_today():
+    """Return a context manager that freezes date.today() to FROZEN_DATE_OBJ."""
+    mock_date = MagicMock(wraps=date)
+    mock_date.today.return_value = FROZEN_DATE_OBJ
+    return patch("app.tracker.dashboard.queries.date", mock_date)
 
 
 def register_login_add_session(client, db):
@@ -18,7 +31,7 @@ def register_login_add_session(client, db):
     client.post(
         "/sessions/new",
         data={
-            "session_date": "2026-03-31",
+            "session_date": FROZEN_DATE,
             "exercise_id[]": [str(exercise_id)],
             "reps[]": ["5,5,5"],
             "csrf_token": get_csrf_token(client, "/sessions/new"),
@@ -35,7 +48,7 @@ def test_session_detail_shows_exercises(client, db):
 
     assert response.status_code == 200
     assert b"Deadlift" in response.data
-    assert b"2026-03-31" in response.data
+    assert b"2026-01-01" in response.data
     # Each set value (5) should appear
     assert b"5" in response.data
 
@@ -68,10 +81,11 @@ def test_session_detail_404_for_other_user(client, db):
 def test_dashboard_links_to_session_detail(client, db):
     register_login_add_session(client, db)
 
-    response = client.get("/dashboard")
+    with _patch_today():
+        response = client.get("/dashboard")
 
     # The calendar now links to the training-day page for days with sessions
-    assert b"/training-day/2026-03-31" in response.data
+    assert b"/training-day/2026-01-01" in response.data
 
 
 def test_delete_session(client, db):
@@ -112,7 +126,7 @@ def test_edit_session_page_loads(client, db):
 
     assert response.status_code == 200
     assert b"Edit Session" in response.data
-    assert b"2026-03-31" in response.data
+    assert b"2026-01-01" in response.data
     # existing exercise should be pre-selected (its name visible)
     assert b"Deadlift" in response.data
 
@@ -127,7 +141,7 @@ def test_edit_session_updates_date(client, db):
     response = client.post(
         f"/sessions/{session_id}/edit",
         data={
-            "session_date": "2026-04-01",
+            "session_date": "2026-01-15",
             "exercise_id[]": [str(exercise_id)],
             "reps[]": ["5,5,5"],
             "csrf_token": csrf,
@@ -139,7 +153,7 @@ def test_edit_session_updates_date(client, db):
     row = db.execute(
         "SELECT session_date FROM sessions WHERE id = ?", (session_id,)
     ).fetchone()
-    assert row["session_date"] == "2026-04-01"
+    assert row["session_date"] == "2026-01-15"
 
 
 def test_edit_session_updates_reps(client, db):
@@ -152,7 +166,7 @@ def test_edit_session_updates_reps(client, db):
     client.post(
         f"/sessions/{session_id}/edit",
         data={
-            "session_date": "2026-03-31",
+            "session_date": FROZEN_DATE,
             "exercise_id[]": [str(exercise_id)],
             "reps[]": ["10,8"],
             "csrf_token": csrf,
@@ -189,7 +203,7 @@ def test_edit_session_replaces_exercises(client, db):
     client.post(
         f"/sessions/{session_id}/edit",
         data={
-            "session_date": "2026-03-31",
+            "session_date": FROZEN_DATE,
             "exercise_id[]": [str(press_id)],
             "reps[]": ["12,10"],
             "csrf_token": csrf,
@@ -227,7 +241,7 @@ def test_edit_session_rejects_invalid_date(client, db):
     row = db.execute(
         "SELECT session_date FROM sessions WHERE id = ?", (session_id,)
     ).fetchone()
-    assert row["session_date"] == "2026-03-31"
+    assert row["session_date"] == FROZEN_DATE
 
 
 def test_edit_session_rejects_no_exercises(client, db):
@@ -236,7 +250,7 @@ def test_edit_session_rejects_no_exercises(client, db):
     csrf = get_csrf_token(client, f"/sessions/{session_id}/edit")
     response = client.post(
         f"/sessions/{session_id}/edit",
-        data={"session_date": "2026-03-31", "csrf_token": csrf},
+        data={"session_date": FROZEN_DATE, "csrf_token": csrf},
         follow_redirects=True,
     )
 

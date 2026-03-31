@@ -59,11 +59,13 @@
              class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Exercises</a>
           <a href="{{ url_for('routes.progress') }}"
              class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Progress</a>
+          <a href="{{ url_for('routes.profile') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Profile</a>
           <form method="post" action="{{ url_for('auth.logout') }}" class="ml-2">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit"
                     class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white transition cursor-pointer border-none bg-transparent">
-              Logout
+              Logout ({{ (g.user['name'].split()[0]) if g.user['name'] else g.user['email'] }})
             </button>
           </form>
         </div>
@@ -98,11 +100,13 @@
            class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Exercises</a>
         <a href="{{ url_for('routes.progress') }}"
            class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Progress</a>
+        <a href="{{ url_for('routes.profile') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Profile</a>
         <form method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit"
                   class="w-full text-left rounded-md px-3 py-2 text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white bg-transparent border-none cursor-pointer">
-            Logout
+            Logout ({{ (g.user['name'].split()[0]) if g.user['name'] else g.user['email'].split('@')[0] }})
           </button>
         </form>
       {% else %}

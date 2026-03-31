@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Edit Profile – Sport Tracker{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-gray-900">Edit Profile</h1>
+  <p class="text-sm text-gray-500 mt-0.5">Update your personal details</p>
+</div>
+
+<div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-8 max-w-2xl">
+  <form method="post" id="profile-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="space-y-5">
+
+      <!-- Name -->
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+          Full Name <span class="text-red-500">*</span>
+        </label>
+        <input id="name" name="name" type="text" autocomplete="name"
+               value="{{ user['name'] or '' }}"
+               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                      text-gray-900 placeholder:text-gray-400 shadow-sm
+                      focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+        <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+          <span>Name is required.</span>
+        </p>
+      </div>
+
+      <!-- Date of Birth -->
+      <div>
+        <label for="date_of_birth" class="flex items-center gap-2 mb-1">
+          <span class="text-sm font-medium text-gray-700">Date of Birth</span>
+          <span class="text-xs font-normal text-gray-400">— optional</span>
+        </label>
+        <input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday"
+               value="{{ user['date_of_birth'] or '' }}"
+               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                      {{ 'text-gray-900' if user['date_of_birth'] else 'text-gray-400' }} shadow-sm
+                      focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+               onchange="this.classList.toggle('text-gray-400', !this.value); this.classList.toggle('text-gray-900', !!this.value)">
+      </div>
+
+      <!-- Weight -->
+      <div>
+        <label for="weight" class="flex items-center gap-2 mb-1">
+          <span class="text-sm font-medium text-gray-700">Weight</span>
+          <span class="text-xs font-normal text-gray-400">— optional</span>
+        </label>
+        <div class="relative">
+          <input id="weight" name="weight" type="number" min="1" max="500" step="0.1"
+                 placeholder="70"
+                 value="{{ user['weight'] or '' }}"
+                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm
+                        text-gray-900 placeholder:text-gray-400 shadow-sm
+                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-600">kg</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit"
+                class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm
+                       hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition active:scale-95">
+          Save changes
+        </button>
+        <a href="{{ url_for('routes.profile') }}"
+           class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700
+                  hover:bg-gray-50 transition active:scale-95">
+          Cancel
+        </a>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('profile-form').addEventListener('submit', function (e) {
+    const name = document.getElementById('name').value.trim();
+    const nameError = document.getElementById('name-error');
+    if (!name) {
+      nameError.classList.remove('hidden');
+      document.getElementById('name').classList.add('border-red-400');
+      document.getElementById('name').classList.remove('border-gray-300');
+      e.preventDefault();
+    } else {
+      nameError.classList.add('hidden');
+      document.getElementById('name').classList.remove('border-red-400');
+      document.getElementById('name').classList.add('border-gray-300');
+    }
+  });
+</script>
+{% endblock %}
+
+
+

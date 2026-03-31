@@ -9,6 +9,7 @@ Minimal Flask + SQLite app to track personal training sessions with exercises, s
 - Session logger with reps per set (`12,10,8` format)
 - Progress pages with per-exercise line chart (daily reps and sets)
 - SQLite schema designed for future extension (e.g., exercise descriptions)
+- Frontend: Tailwind CSS (CDN), Chart.js, vanilla JS
 
 ## Project Structure
 

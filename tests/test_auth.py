@@ -1,9 +1,17 @@
 from tests.conftest import get_csrf_token, login, register
 
 
-def test_register_and_login_flow(client):
+def test_register_lands_on_dashboard(client):
+    # Registration should log the user in and land on the dashboard
     response = register(client)
-    assert b"Login" in response.data
+    assert b"Dashboard" in response.data
+
+
+def test_login_flow(client):
+    register(client)
+    # Log out first, then verify login works independently
+    csrf = get_csrf_token(client, "/dashboard")
+    client.post("/logout", data={"csrf_token": csrf})
 
     response = login(client)
     assert b"Dashboard" in response.data
@@ -56,7 +64,7 @@ def test_duplicate_register_shows_error(client):
 
 def test_logout(client):
     register(client)
-    login(client)
+    # register() already logs us in — no need to call login() separately
     csrf_token = get_csrf_token(client, "/dashboard")
     response = client.post(
         "/logout",
