@@ -17,3 +17,10 @@ instance/
 # Local environment files
 .env
 
+# Terraform
+terraform/.terraform/
+terraform/*.tfvars
+terraform/*.tfplan
+terraform/tfplan
+terraform/.terraform.lock.hcl
+
