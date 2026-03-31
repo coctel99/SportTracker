@@ -1,4 +1,4 @@
-"""Tests for exercises routes."""
+"""Tests for exercise CRUD."""
 
 from tests.conftest import get_csrf_token, login, register
 
@@ -103,10 +103,7 @@ def test_duplicate_exercise_shows_error(client):
     assert b"already exists" in response.data
 
 
-# ── Edit exercise ─────────────────────────────────────────────────────────────
-
-
-def test_edit_exercise_page_loads(client, db):
+def test_edit_exercise_get(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
     exercise_id = db.execute(

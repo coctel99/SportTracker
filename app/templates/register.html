@@ -2,131 +2,159 @@
 {% block title %}Register – Sport Tracker{% endblock %}
 {% block content %}
 
-<div class="flex min-h-[70vh] items-center justify-center">
-  <div class="w-full max-w-sm">
+<div class="flex min-h-[80vh] items-center justify-center py-6">
+  <div class="w-full max-w-3xl">
 
-    <div class="mb-8 text-center">
+    <div class="mb-6 text-center">
       <h1 class="text-2xl font-bold text-gray-900">Create your account</h1>
       <p class="mt-1 text-sm text-gray-500">Start tracking your workouts today</p>
     </div>
 
-    <div class="rounded-2xl bg-white shadow-sm border border-gray-200 p-8">
+    <div class="rounded-2xl bg-white shadow-sm border border-gray-200 overflow-hidden">
       <form method="post" id="register-form" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="space-y-5">
 
-        <!-- Name -->
-        <div>
-          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
-          <input id="name" name="name" type="text" autocomplete="name"
-                 placeholder="Ivan Ivanov"
-                 value="{{ form_name | default('') }}"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                        text-gray-900 placeholder:text-gray-400 shadow-sm
-                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-          <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-            </svg>
-            <span>Name is required.</span>
-          </p>
-        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
 
-        <!-- Email -->
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-          <input id="email" name="email" type="email" autocomplete="email"
-                 placeholder="you@example.com"
-                 value="{{ form_email | default('') }}"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                        text-gray-900 placeholder:text-gray-400 shadow-sm
-                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-          <p id="email-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-            </svg>
-            <span id="email-error-text">Enter a valid email address.</span>
-          </p>
-        </div>
+          <!-- Left column: credentials -->
+          <div class="p-8 flex flex-col justify-between gap-5">
+            <div class="space-y-5">
+              <div class="mb-1">
+                <h2 class="text-sm font-semibold text-gray-700">Account</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Your login credentials</p>
+              </div>
 
-        <!-- Password -->
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
-          <input id="password" name="password" type="password" autocomplete="off"
-                 placeholder="At least 8 characters"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                        text-gray-900 placeholder:text-gray-400 shadow-sm
-                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-          <p id="password-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-            </svg>
-            <span id="password-error-text">Password must be at least 8 characters.</span>
-          </p>
-          <p class="mt-1 text-xs text-gray-400">Minimum 8 characters</p>
-        </div>
+              <!-- Email -->
+              <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                <input id="email" name="email" type="email" autocomplete="email"
+                       placeholder="you@example.com"
+                       value="{{ form_email | default('') }}"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                <p id="email-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                  <span id="email-error-text">Enter a valid email address.</span>
+                </p>
+              </div>
 
-        <!-- Date of Birth -->
-        <div>
-          <label for="date_of_birth" class="flex items-center gap-2 mb-1">
-            <span class="text-sm font-medium text-gray-700">Date of Birth</span>
-            <span class="text-xs font-normal text-gray-400">— optional</span>
-          </label>
-          <input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday"
-                 value="{{ form_dob | default('') }}"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                        {{ 'text-gray-900' if form_dob else 'text-gray-400' }} shadow-sm
-                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                 onchange="this.classList.toggle('text-gray-400', !this.value); this.classList.toggle('text-gray-900', !!this.value)">
-        </div>
+              <!-- Password -->
+              <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                <input id="password" name="password" type="password" autocomplete="off"
+                       placeholder="At least 8 characters"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                <p id="password-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                  <span id="password-error-text">Password must be at least 8 characters.</span>
+                </p>
+                <p class="mt-1 text-xs text-gray-400">Minimum 8 characters</p>
+              </div>
 
-        <!-- Weight -->
-        <div>
-          <label for="weight" class="flex items-center gap-2 mb-1">
-            <span class="text-sm font-medium text-gray-700">Weight</span>
-            <span class="text-xs font-normal text-gray-400">— optional</span>
-          </label>
-          <div class="relative">
-            <input id="weight" name="weight" type="number" min="1" max="500" step="0.1"
-                   placeholder="70"
-                   value="{{ form_weight | default('') }}"
-                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm
-                          text-gray-900 placeholder:text-gray-400 shadow-sm
-                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">kg</span>
+              <!-- Confirm Password -->
+              <div>
+                <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password <span class="text-red-500">*</span></label>
+                <input id="confirm_password" name="confirm_password" type="password" autocomplete="off"
+                       placeholder="Repeat your password"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                <p id="confirm-password-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                  <span>Passwords do not match.</span>
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <button type="submit"
+                      class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm
+                             hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition active:scale-95">
+                Create account
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- Sex -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Sex <span class="text-red-500">*</span></label>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="sex" value="male"
-                     {{ 'checked' if form_sex == 'male' }}
-                     class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
-              <span class="text-sm text-gray-700">Male</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="sex" value="female"
-                     {{ 'checked' if form_sex == 'female' }}
-                     class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
-              <span class="text-sm text-gray-700">Female</span>
-            </label>
+          <!-- Right column: personal details -->
+          <div class="p-8 flex flex-col gap-5">
+            <div class="mb-1">
+              <h2 class="text-sm font-semibold text-gray-700">Personal details</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Tell us a bit about yourself</p>
+            </div>
+
+            <!-- Name -->
+            <div>
+              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+              <input id="name" name="name" type="text" autocomplete="name"
+                     placeholder="Ivan Ivanov"
+                     value="{{ form_name | default('') }}"
+                     class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                            text-gray-900 placeholder:text-gray-400 shadow-sm
+                            focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+              <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                <span>Name is required.</span>
+              </p>
+            </div>
+
+            <!-- Date of Birth -->
+            <div>
+              <label for="date_of_birth" class="flex items-center gap-2 mb-1">
+                <span class="text-sm font-medium text-gray-700">Date of Birth</span>
+                <span class="text-xs font-normal text-gray-400">— optional</span>
+              </label>
+              <input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday"
+                     value="{{ form_dob | default('') }}"
+                     class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                            {{ 'text-gray-900' if form_dob else 'text-gray-400' }} shadow-sm
+                            focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+                     onchange="this.classList.toggle('text-gray-400', !this.value); this.classList.toggle('text-gray-900', !!this.value)">
+            </div>
+
+            <!-- Weight -->
+            <div>
+              <label for="weight" class="flex items-center gap-2 mb-1">
+                <span class="text-sm font-medium text-gray-700">Weight</span>
+                <span class="text-xs font-normal text-gray-400">— optional</span>
+              </label>
+              <div class="relative">
+                <input id="weight" name="weight" type="number" min="1" max="500" step="0.1"
+                       placeholder="70"
+                       value="{{ form_weight | default('') }}"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">kg</span>
+              </div>
+            </div>
+
+            <!-- Sex -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Sex <span class="text-red-500">*</span></label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sex" value="male"
+                         {{ 'checked' if form_sex == 'male' }}
+                         class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                  <span class="text-sm text-gray-700">Male</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="sex" value="female"
+                         {{ 'checked' if form_sex == 'female' }}
+                         class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                  <span class="text-sm text-gray-700">Female</span>
+                </label>
+              </div>
+              <p id="sex-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                <span>Please select your biological sex.</span>
+              </p>
+            </div>
           </div>
-          <p id="sex-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-            </svg>
-            <span>Please select your biological sex.</span>
-          </p>
-        </div>
 
-        <button type="submit"
-                class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm
-                       hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition active:scale-95">
-          Create account
-        </button>
         </div>
       </form>
     </div>
@@ -143,17 +171,11 @@
 
 {% block scripts %}
 <script>
-
-  // ── Registration form validation ──────────────────────────────────────────
   document.getElementById('register-form').addEventListener('submit', function (e) {
     let valid = true;
 
-    function showError(id) {
-      document.getElementById(id).classList.remove('hidden');
-    }
-    function hideError(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
+    function showError(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hideError(id) { document.getElementById(id).classList.add('hidden'); }
     function setInputError(inputId, hasError) {
       const el = document.getElementById(inputId);
       if (hasError) {
@@ -163,14 +185,6 @@
         el.classList.remove('border-red-400', 'focus:border-red-400', 'focus:ring-red-200');
         el.classList.add('border-gray-300');
       }
-    }
-
-    // Name
-    const name = document.getElementById('name').value.trim();
-    if (!name) {
-      showError('name-error'); setInputError('name', true); valid = false;
-    } else {
-      hideError('name-error'); setInputError('name', false);
     }
 
     // Email
@@ -196,6 +210,22 @@
       showError('password-error'); setInputError('password', true); valid = false;
     } else {
       hideError('password-error'); setInputError('password', false);
+    }
+
+    // Confirm password
+    const confirm = document.getElementById('confirm_password').value;
+    if (!confirm || confirm !== password) {
+      showError('confirm-password-error'); setInputError('confirm_password', true); valid = false;
+    } else {
+      hideError('confirm-password-error'); setInputError('confirm_password', false);
+    }
+
+    // Name
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+      showError('name-error'); setInputError('name', true); valid = false;
+    } else {
+      hideError('name-error'); setInputError('name', false);
     }
 
     // Sex

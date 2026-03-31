@@ -2,8 +2,6 @@
 
 from tests.conftest import get_csrf_token, login, register
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 
 def register_and_login(client):
     """Register (which auto-logs in) and return the client ready to use."""
@@ -34,9 +32,6 @@ def post_change_password(client, current, new, confirm):
     )
 
 
-# ── Profile page ──────────────────────────────────────────────────────────────
-
-
 def test_profile_page_loads(client):
     register_and_login(client)
     response = client.get("/profile")
@@ -60,9 +55,6 @@ def test_profile_requires_login(client):
     response = client.get("/profile")
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
-
-
-# ── Edit personal details ─────────────────────────────────────────────────────
 
 
 def test_edit_profile_updates_name(client, db):
@@ -137,9 +129,6 @@ def test_edit_profile_rejects_negative_weight(client, db):
     response = post_edit(client, name="Test User", date_of_birth="", weight="-5")
 
     assert b"positive number" in response.data
-
-
-# ── Change password ───────────────────────────────────────────────────────────
 
 
 def test_change_password_success(client):

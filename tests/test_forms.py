@@ -8,8 +8,6 @@ from app.tracker.sessions.forms import (
     parse_session_date,
 )
 
-# ── parse_optional_int ────────────────────────────────────────────────────────
-
 
 def test_parse_optional_int_empty_returns_none():
     assert parse_optional_int("", "Sets", 1) is None
@@ -33,9 +31,6 @@ def test_parse_optional_int_non_integer():
         parse_optional_int("abc", "Sets", 1)
 
 
-# ── parse_session_date ────────────────────────────────────────────────────────
-
-
 def test_parse_session_date_empty_returns_today():
     from datetime import date
 
@@ -53,9 +48,6 @@ def test_parse_session_date_invalid():
 
 def test_parse_session_date_strips_whitespace():
     assert parse_session_date("  2026-06-01  ") == "2026-06-01"
-
-
-# ── parse_reps_list ───────────────────────────────────────────────────────────
 
 
 def test_parse_reps_list_valid():

@@ -1,4 +1,4 @@
-"""Tests for multiple sessions on the same day (training-day page)."""
+"""Tests for multi-session day behaviour."""
 
 from tests.conftest import get_csrf_token, login, register
 
@@ -33,9 +33,6 @@ def _log_session(client, date, exercise_id, reps):
         },
         follow_redirects=True,
     )
-
-
-# ── training-day routing ──────────────────────────────────────────────────────
 
 
 def test_training_day_single_session_redirects_to_detail(client, db):
@@ -94,9 +91,6 @@ def test_training_day_requires_login(client, db):
     response = client.get("/training-day/2026-03-31")
     assert response.status_code == 302
     assert "/login" in response.headers["Location"]
-
-
-# ── Dashboard stats with multiple sessions ────────────────────────────────────
 
 
 def test_dashboard_total_reps_sums_all_sessions_today(client, db, app):

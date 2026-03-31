@@ -50,6 +50,7 @@ def register(
         data={
             "email": email,
             "password": password,
+            "confirm_password": password,
             "name": name,
             "sex": sex,
             "csrf_token": csrf_token,

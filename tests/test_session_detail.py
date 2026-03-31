@@ -116,9 +116,6 @@ def test_delete_session_404_for_other_user(client, db):
     assert response.status_code == 404
 
 
-# ── Edit session ──────────────────────────────────────────────────────────────
-
-
 def test_edit_session_page_loads(client, db):
     session_id = register_login_add_session(client, db)
 

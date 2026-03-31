@@ -4,6 +4,7 @@ Each handler is deliberately thin: read request data → call tracker logic →
 flash / redirect / render.  No SQL and no business logic lives here.
 """
 
+import secrets
 import sqlite3
 from datetime import date
 
@@ -16,11 +17,19 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 
+from app.auth import bp as auth_bp
 from app.auth import login_required
-from app.auth.service import change_password
+from app.auth.service import (
+    DuplicateEmailError,
+    authenticate_user,
+    change_password,
+    register_user,
+)
+from app.auth.validators import validate_email, validate_password
 from app.tracker.dashboard.queries import get_dashboard_stats
 from app.tracker.exercises.queries import (
     create_exercise,
@@ -54,7 +63,89 @@ from app.tracker.sessions.queries import (
 bp = Blueprint("routes", __name__)
 
 
-# ── Root ──────────────────────────────────────────────────────────────────────
+@auth_bp.route("/register", methods=("GET", "POST"))
+def register():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        name = request.form.get("name", "").strip()
+        date_of_birth = request.form.get("date_of_birth", "").strip()
+        sex = request.form.get("sex", "").strip()
+        raw_weight = request.form.get("weight", "").strip()
+
+        weight: float | None = None
+        error = validate_email(email) or validate_password(password)
+
+        if error is None and password != confirm_password:
+            error = "Passwords do not match."
+
+        if error is None and not name:
+            error = "Name is required."
+
+        if error is None and sex not in ("male", "female"):
+            error = "Please select your biological sex."
+
+        if error is None and raw_weight:
+            try:
+                weight = float(raw_weight.replace(",", "."))
+                if weight <= 0:
+                    error = "Weight must be a positive number."
+            except ValueError:
+                error = "Weight must be a valid number."
+
+        if error is None:
+            try:
+                register_user(
+                    email,
+                    password,
+                    name=name,
+                    date_of_birth=date_of_birth or None,
+                    sex=sex,
+                    weight=weight,
+                )
+                user = authenticate_user(email, password)
+                session.clear()
+                session["user_id"] = user["id"]
+                session["csrf_token"] = secrets.token_urlsafe(32)
+                return redirect(url_for("routes.dashboard"))
+            except DuplicateEmailError:
+                error = "User already exists."
+
+        flash(error, "error")
+
+    return render_template(
+        "register.html",
+        form_name=request.form.get("name", ""),
+        form_email=request.form.get("email", ""),
+        form_dob=request.form.get("date_of_birth", ""),
+        form_sex=request.form.get("sex", ""),
+        form_weight=request.form.get("weight", ""),
+    )
+
+
+@auth_bp.route("/login", methods=("GET", "POST"))
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        user = authenticate_user(email, password)
+        if user is None:
+            flash("Invalid credentials.", "error")
+        else:
+            session.clear()
+            session["user_id"] = user["id"]
+            session["csrf_token"] = secrets.token_urlsafe(32)
+            return redirect(url_for("routes.dashboard"))
+
+    return render_template("login.html")
+
+
+@auth_bp.route("/logout", methods=("POST",))
+def logout():
+    session.clear()
+    return redirect(url_for("auth.login"))
 
 
 @bp.route("/")
@@ -62,9 +153,6 @@ def index():
     if g.user is None:
         return redirect(url_for("auth.login"))
     return redirect(url_for("routes.dashboard"))
-
-
-# ── Dashboard ─────────────────────────────────────────────────────────────────
 
 
 @bp.route("/dashboard")
@@ -77,9 +165,6 @@ def dashboard():
         year, month = None, None
     stats = get_dashboard_stats(g.user["id"], year=year, month=month)
     return render_template("dashboard.html", **stats)
-
-
-# ── Exercises ─────────────────────────────────────────────────────────────────
 
 
 @bp.route("/exercises", methods=("GET", "POST"))
@@ -144,9 +229,6 @@ def edit_exercise_view(exercise_id):
                 flash("Exercise with this name already exists.", "error")
 
     return render_template("exercise_edit.html", exercise=exercise)
-
-
-# ── Sessions ──────────────────────────────────────────────────────────────────
 
 
 @bp.route("/sessions/new", methods=("GET", "POST"))
@@ -342,9 +424,6 @@ def edit_session_view(session_id):
     return _render()
 
 
-# ── Progress ──────────────────────────────────────────────────────────────────
-
-
 @bp.route("/progress")
 @login_required
 def progress():
@@ -374,9 +453,6 @@ def progress_data(exercise_id):
 @login_required
 def progress_overview():
     return jsonify(get_top_exercises_chart_data(g.user["id"]))
-
-
-# ── Profile ───────────────────────────────────────────────────────────────────
 
 
 @bp.route("/profile")
@@ -433,8 +509,8 @@ def change_password_view():
     error = None
     if not current or not new or not confirm:
         error = "All password fields are required."
-    elif len(new) < 8:
-        error = "New password must be at least 8 characters."
+    elif pw_error := validate_password(new):
+        error = pw_error
     elif new != confirm:
         error = "New passwords do not match."
     elif not change_password(g.user["id"], current, new):
