@@ -34,10 +34,10 @@ jobs:
       - name: Write terraform.tfvars
         run: |
           cat > terraform.tfvars <<TFVARS
-          project_id        = "${{ secrets.TF_VAR_PROJECT_ID }}"
-          github_repo       = "${{ secrets.TF_VAR_GITHUB_REPO }}"
-          ssh_public_key    = "${{ secrets.TF_VAR_SSH_PUBLIC_KEY }}"
-          deploy_public_key = "${{ secrets.TF_VAR_DEPLOY_PUBLIC_KEY }}"
+          project_id        = "${{ vars.TF_VAR_PROJECT_ID }}"
+          github_repo       = "${{ vars.TF_VAR_GITHUB_REPO }}"
+          ssh_public_key    = "${{ vars.TF_VAR_SSH_PUBLIC_KEY }}"
+          deploy_public_key = "${{ vars.TF_VAR_DEPLOY_PUBLIC_KEY }}"
           app_secret_key    = "${{ secrets.TF_VAR_APP_SECRET_KEY }}"
           TFVARS
 
