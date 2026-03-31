@@ -156,3 +156,47 @@ def get_session_detail_for_edit(session_id: int) -> list:
         grouped[-1]["sets"].append(row["reps"])
     return grouped
 
+
+def get_sessions_for_day(user_id: int, session_date: str) -> list[dict]:
+    """Return all sessions for *user_id* on *session_date*, each with their exercises.
+
+    Returns a list of dicts::
+
+        [{"id": int, "session_date": str,
+          "exercises": [{"name": str, "total_reps": int}, ...]}, ...]
+    """
+    db = get_db()
+    session_rows = db.execute(
+        """
+        SELECT id, session_date
+        FROM sessions
+        WHERE user_id = ? AND session_date = ?
+        ORDER BY id ASC
+        """,
+        (user_id, session_date),
+    ).fetchall()
+
+    result = []
+    for s in session_rows:
+        exercises = db.execute(
+            """
+            SELECT e.name,
+                   COALESCE(SUM(es.reps), 0) AS total_reps,
+                   COUNT(es.id)              AS total_sets
+            FROM session_exercises se
+            JOIN exercises e  ON e.id  = se.exercise_id
+            JOIN exercise_sets es ON es.session_exercise_id = se.id
+            WHERE se.session_id = ?
+            GROUP BY e.id, e.name
+            ORDER BY se.position ASC
+            """,
+            (s["id"],),
+        ).fetchall()
+        result.append(
+            {
+                "id": s["id"],
+                "session_date": s["session_date"],
+                "exercises": [dict(e) for e in exercises],
+            }
+        )
+    return result

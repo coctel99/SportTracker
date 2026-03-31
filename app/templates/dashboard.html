@@ -80,8 +80,9 @@
             {% set session_ids = sessions_by_day.get(day, []) %}
             {% set is_today = (today_day == day) %}
             {% if session_ids %}
-              {# Day with one or more sessions – link to the first session #}
-              <a href="{{ url_for('routes.session_detail', session_id=session_ids[0]) }}"
+              {# Day with one or more sessions – link to the training day page #}
+              {% set day_str = "%04d-%02d-%02d" | format(cal_year, cal_month, day) %}
+              <a href="{{ url_for('routes.training_day', session_date=day_str) }}"
                  title="{{ session_ids | length }} session{% if session_ids | length > 1 %}s{% endif %}"
                  class="relative h-10 flex items-center justify-center rounded-full
                         bg-indigo-600 text-white font-semibold text-sm

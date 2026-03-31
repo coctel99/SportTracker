@@ -19,6 +19,7 @@ from app.tracker.sessions.queries import (
     get_session_detail,
     get_session_detail_for_edit,
     get_session_for_user,
+    get_sessions_for_day,
     save_session,
     update_session,
 )
@@ -202,6 +203,22 @@ def session_detail(session_id):
             exercises.append({"name": row["exercise_name"], "sets": []})
         exercises[-1]["sets"].append(row["reps"])
     return render_template("session_detail.html", session=sess, exercises=exercises)
+
+
+@bp.route("/training-day/<session_date>")
+@login_required
+def training_day(session_date):
+    """Show all sessions for a given day.
+
+    If there is exactly one session redirect straight to session_detail.
+    If there are none, redirect to new_session with the date pre-filled.
+    """
+    sessions = get_sessions_for_day(g.user["id"], session_date)
+    if len(sessions) == 0:
+        return redirect(url_for("routes.new_session", date=session_date))
+    if len(sessions) == 1:
+        return redirect(url_for("routes.session_detail", session_id=sessions[0]["id"]))
+    return render_template("training_day.html", session_date=session_date, sessions=sessions)
 
 
 @bp.route("/sessions/<int:session_id>/delete", methods=("POST",))

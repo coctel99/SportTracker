@@ -66,11 +66,12 @@ def test_session_detail_404_for_other_user(client, db):
 
 
 def test_dashboard_links_to_session_detail(client, db):
-    session_id = register_login_add_session(client, db)
+    register_login_add_session(client, db)
 
     response = client.get("/dashboard")
 
-    assert f"/sessions/{session_id}".encode() in response.data
+    # The calendar now links to the training-day page for days with sessions
+    assert b"/training-day/2026-03-31" in response.data
 
 
 def test_delete_session(client, db):

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}{{ session_date }} – Sport Tracker{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center gap-3">
+  <a href="{{ url_for('routes.dashboard') }}"
+     class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">{{ session_date }}</h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ sessions | length }} session{{ 's' if sessions | length != 1 }} this day</p>
+  </div>
+  <a href="{{ url_for('routes.new_session', date=session_date) }}"
+     class="ml-auto inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+    </svg>
+    Add session
+  </a>
+</div>
+
+<div class="space-y-5">
+  {% for sess in sessions %}
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+
+      <!-- Session header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <span class="text-base font-semibold text-gray-700">Session {{ loop.index }}</span>
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('routes.edit_session_view', session_id=sess.id) }}"
+             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition active:scale-95">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+            </svg>
+            Edit
+          </a>
+          <a href="{{ url_for('routes.session_detail', session_id=sess.id) }}"
+             class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition active:scale-95">
+            View details
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Exercises summary -->
+      {% if sess.exercises %}
+        <ul class="divide-y divide-gray-100">
+          {% for ex in sess.exercises %}
+            <li class="flex items-center justify-between px-6 py-4">
+              <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4.5 12h15M4.5 12a2 2 0 01-2-2V8a2 2 0 012-2h1a2 2 0 012 2v8a2 2 0 01-2 2H4.5a2 2 0 01-2-2v-2M19.5 12a2 2 0 002 2v2a2 2 0 01-2 2h-1a2 2 0 01-2-2V8a2 2 0 012-2h1a2 2 0 012 2v2a2 2 0 01-2 2"/>
+                </svg>
+                <span class="text-base font-semibold text-gray-900">{{ ex.name }}</span>
+              </div>
+              <div class="flex items-center gap-6 text-sm">
+                <span class="text-gray-500">{{ ex.total_sets }} set{{ 's' if ex.total_sets != 1 }}</span>
+                <span class="font-bold text-indigo-600 text-base">{{ ex.total_reps }} reps</span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 text-right">
+          Total reps: <span class="font-bold text-gray-800 text-base">{{ sess.exercises | sum(attribute='total_reps') }}</span>
+        </div>
+      {% else %}
+        <p class="px-6 py-5 text-sm text-gray-400">No exercises recorded.</p>
+      {% endif %}
+
+    </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
+
