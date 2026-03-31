@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sport Tracker{% endblock %}</title>
+
+  <!-- Tailwind CSS (play CDN – no build step) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#4f46e5', dark: '#4338ca', light: '#eef2ff' }
+          },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- App JS (deferred so DOM is ready) -->
+  <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="h-full bg-slate-50 text-gray-900 font-sans antialiased">
+
+  <!-- ── Navigation ──────────────────────────────────────────────────────── -->
+  <nav class="bg-gray-900 shadow-md">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-14 items-center justify-between">
+
+        <!-- Logo / brand -->
+        <a href="{{ url_for('routes.dashboard') if g.user else url_for('auth.login') }}"
+           class="flex items-center gap-2 text-white font-bold text-lg tracking-tight">
+          <!-- dumbbell icon (inline SVG) -->
+          <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4.5 12h15M4.5 12a2 2 0 01-2-2V8a2 2 0 012-2h1a2 2 0 012 2v8a2 2 0 01-2 2H4.5a2 2 0 01-2-2v-2M19.5 12a2 2 0 002 2v2a2 2 0 01-2 2h-1a2 2 0 01-2-2V8a2 2 0 012-2h1a2 2 0 012 2v2a2 2 0 01-2 2"/>
+          </svg>
+          Sport Tracker
+        </a>
+
+        <!-- Desktop links -->
+        {% if g.user %}
+        <div class="hidden sm:flex items-center gap-1">
+          <a href="{{ url_for('routes.dashboard') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Dashboard</a>
+          <a href="{{ url_for('routes.new_session') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Log Session</a>
+          <a href="{{ url_for('routes.exercises') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Exercises</a>
+          <a href="{{ url_for('routes.progress') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Progress</a>
+          <form method="post" action="{{ url_for('auth.logout') }}" class="ml-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit"
+                    class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white transition cursor-pointer border-none bg-transparent">
+              Logout
+            </button>
+          </form>
+        </div>
+        {% else %}
+        <div class="hidden sm:flex items-center gap-2">
+          <a href="{{ url_for('auth.login') }}"
+             class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">Login</a>
+          <a href="{{ url_for('auth.register') }}"
+             class="rounded-md px-4 py-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition">Register</a>
+        </div>
+        {% endif %}
+
+        <!-- Mobile hamburger -->
+        <button id="nav-toggle" type="button"
+                class="sm:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-700 hover:text-white transition">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Mobile menu (hidden by default, toggled by JS) -->
+    <div id="nav-menu" class="hidden sm:hidden border-t border-gray-700 px-4 py-3 space-y-1">
+      {% if g.user %}
+        <a href="{{ url_for('routes.dashboard') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Dashboard</a>
+        <a href="{{ url_for('routes.new_session') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Log Session</a>
+        <a href="{{ url_for('routes.exercises') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Exercises</a>
+        <a href="{{ url_for('routes.progress') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Progress</a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit"
+                  class="w-full text-left rounded-md px-3 py-2 text-sm font-medium text-gray-400 hover:bg-gray-700 hover:text-white bg-transparent border-none cursor-pointer">
+            Logout
+          </button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Login</a>
+        <a href="{{ url_for('auth.register') }}"
+           class="block rounded-md px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500">Register</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ── Flash messages ───────────────────────────────────────────────────── -->
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-4 space-y-2">
+        {% for message in messages %}
+          <div class="flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <svg class="mt-0.5 w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── Page content ─────────────────────────────────────────────────────── -->
+  <main class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+
