@@ -6,7 +6,9 @@ from datetime import date, timedelta
 from app.db import get_db
 
 
-def get_dashboard_stats(user_id: int, year: int | None = None, month: int | None = None) -> dict:
+def get_dashboard_stats(
+    user_id: int, year: int | None = None, month: int | None = None
+) -> dict:
     """Return all stats needed to render the dashboard."""
     db = get_db()
     today = date.today()
@@ -82,10 +84,11 @@ def get_dashboard_stats(user_id: int, year: int | None = None, month: int | None
         "cal_month_name": date(cal_year, cal_month, 1).strftime("%B %Y"),
         "cal_weeks": cal_weeks,
         "sessions_by_day": sessions_by_day,
-        "today_day": today.day if (today.year == cal_year and today.month == cal_month) else None,
+        "today_day": today.day
+        if (today.year == cal_year and today.month == cal_month)
+        else None,
         "prev_year": prev_year,
         "prev_month": prev_month,
         "next_year": next_year,
         "next_month": next_month,
     }
-

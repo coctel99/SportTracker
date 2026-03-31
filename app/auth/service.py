@@ -31,10 +31,7 @@ def register_user(email: str, password: str) -> None:
 def authenticate_user(email: str, password: str):
     """Return the user row if credentials are valid, else None."""
     db = get_db()
-    user = db.execute(
-        "SELECT * FROM users WHERE email = ?", (email,)
-    ).fetchone()
+    user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
     if user is None or not check_password_hash(user["password_hash"], password):
         return None
     return user
-

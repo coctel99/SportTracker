@@ -62,4 +62,3 @@ def parse_reps_list(value: str) -> list[int]:
     if not result:
         raise ValueError("Reps are required for each exercise row.")
     return result
-

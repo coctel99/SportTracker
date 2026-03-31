@@ -7,12 +7,38 @@ flash / redirect / render.  No SQL and no business logic lives here.
 import sqlite3
 from datetime import date
 
-from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from app.auth import login_required
 from app.tracker.dashboard.queries import get_dashboard_stats
-from app.tracker.exercises.queries import create_exercise, delete_exercise, get_exercise, list_exercises, update_exercise
-from app.tracker.sessions.forms import parse_optional_int, parse_reps_list, parse_session_date
+from app.tracker.exercises.queries import (
+    create_exercise,
+    delete_exercise,
+    get_exercise,
+    list_exercises,
+    update_exercise,
+)
+from app.tracker.progress.queries import (
+    get_chart_data,
+    get_exercise_for_user,
+    get_progress_summary,
+    get_top_exercises_chart_data,
+)
+from app.tracker.sessions.forms import (
+    parse_optional_int,
+    parse_reps_list,
+    parse_session_date,
+)
 from app.tracker.sessions.queries import (
     delete_session,
     get_exercises_for_user,
@@ -23,12 +49,12 @@ from app.tracker.sessions.queries import (
     save_session,
     update_session,
 )
-from app.tracker.progress.queries import get_chart_data, get_exercise_for_user, get_progress_summary, get_top_exercises_chart_data
 
 bp = Blueprint("routes", __name__)
 
 
 # ── Root ──────────────────────────────────────────────────────────────────────
+
 
 @bp.route("/")
 def index():
@@ -38,6 +64,7 @@ def index():
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+
 
 @bp.route("/dashboard")
 @login_required
@@ -52,6 +79,7 @@ def dashboard():
 
 
 # ── Exercises ─────────────────────────────────────────────────────────────────
+
 
 @bp.route("/exercises", methods=("GET", "POST"))
 @login_required
@@ -119,6 +147,7 @@ def edit_exercise_view(exercise_id):
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
 
+
 @bp.route("/sessions/new", methods=("GET", "POST"))
 @login_required
 def new_session():
@@ -127,7 +156,9 @@ def new_session():
     exercises_list = get_exercises_for_user(user_id)
 
     def _render():
-        return render_template("session_new.html", exercises=exercises_list, today=today)
+        return render_template(
+            "session_new.html", exercises=exercises_list, today=today
+        )
 
     if request.method == "POST":
         try:
@@ -181,7 +212,9 @@ def new_session():
         try:
             save_session(user_id, session_date, rows)
         except Exception:
-            flash("An error occurred while saving the session. Please try again.", "error")
+            flash(
+                "An error occurred while saving the session. Please try again.", "error"
+            )
             return _render()
 
         return redirect(url_for("routes.dashboard"))
@@ -218,7 +251,9 @@ def training_day(session_date):
         return redirect(url_for("routes.new_session", date=session_date))
     if len(sessions) == 1:
         return redirect(url_for("routes.session_detail", session_id=sessions[0]["id"]))
-    return render_template("training_day.html", session_date=session_date, sessions=sessions)
+    return render_template(
+        "training_day.html", session_date=session_date, sessions=sessions
+    )
 
 
 @bp.route("/sessions/<int:session_id>/delete", methods=("POST",))
@@ -307,6 +342,7 @@ def edit_session_view(session_id):
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────
+
 
 @bp.route("/progress")
 @login_required

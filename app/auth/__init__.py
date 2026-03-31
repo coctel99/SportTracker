@@ -33,6 +33,7 @@ def validate_password(password: str) -> str | None:
 
 # ── CSRF helpers ──────────────────────────────────────────────────────────────
 
+
 def generate_csrf_token() -> str:
     token = session.get("csrf_token")
     if token is None:
@@ -43,27 +44,29 @@ def generate_csrf_token() -> str:
 
 # ── Login guard decorator ─────────────────────────────────────────────────────
 
+
 def login_required(view):
     @wraps(view)
     def wrapped_view(*args, **kwargs):
         if g.user is None:
             return redirect(url_for("auth.login"))
         return view(*args, **kwargs)
+
     return wrapped_view
 
 
 # ── Before-request hooks ──────────────────────────────────────────────────────
 
+
 @bp.before_app_request
 def load_logged_in_user():
     from app.db import get_db  # local import to avoid circular deps at module load
+
     user_id = session.get("user_id")
     if user_id is None:
         g.user = None
         return
-    g.user = get_db().execute(
-        "SELECT * FROM users WHERE id = ?", (user_id,)
-    ).fetchone()
+    g.user = get_db().execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
 
 @bp.before_app_request
@@ -86,4 +89,3 @@ def inject_csrf_token():
 
 # Imported here so the blueprint picks them up when it is registered.
 from app.auth import routes  # noqa: E402, F401
-

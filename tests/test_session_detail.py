@@ -104,6 +104,7 @@ def test_delete_session_404_for_other_user(client, db):
 
 # ── Edit session ──────────────────────────────────────────────────────────────
 
+
 def test_edit_session_page_loads(client, db):
     session_id = register_login_add_session(client, db)
 
@@ -118,7 +119,9 @@ def test_edit_session_page_loads(client, db):
 
 def test_edit_session_updates_date(client, db):
     session_id = register_login_add_session(client, db)
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Deadlift'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Deadlift'"
+    ).fetchone()["id"]
 
     csrf = get_csrf_token(client, f"/sessions/{session_id}/edit")
     response = client.post(
@@ -133,13 +136,17 @@ def test_edit_session_updates_date(client, db):
     )
 
     assert response.status_code == 200
-    row = db.execute("SELECT session_date FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    row = db.execute(
+        "SELECT session_date FROM sessions WHERE id = ?", (session_id,)
+    ).fetchone()
     assert row["session_date"] == "2026-04-01"
 
 
 def test_edit_session_updates_reps(client, db):
     session_id = register_login_add_session(client, db)
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Deadlift'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Deadlift'"
+    ).fetchone()["id"]
 
     csrf = get_csrf_token(client, f"/sessions/{session_id}/edit")
     client.post(
@@ -174,7 +181,9 @@ def test_edit_session_replaces_exercises(client, db):
         data={"name": "Press", "csrf_token": get_csrf_token(client, "/exercises")},
         follow_redirects=True,
     )
-    press_id = db.execute("SELECT id FROM exercises WHERE name = 'Press'").fetchone()["id"]
+    press_id = db.execute("SELECT id FROM exercises WHERE name = 'Press'").fetchone()[
+        "id"
+    ]
 
     csrf = get_csrf_token(client, f"/sessions/{session_id}/edit")
     client.post(
@@ -197,7 +206,9 @@ def test_edit_session_replaces_exercises(client, db):
 
 def test_edit_session_rejects_invalid_date(client, db):
     session_id = register_login_add_session(client, db)
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Deadlift'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Deadlift'"
+    ).fetchone()["id"]
 
     csrf = get_csrf_token(client, f"/sessions/{session_id}/edit")
     response = client.post(
@@ -213,7 +224,9 @@ def test_edit_session_rejects_invalid_date(client, db):
 
     assert b"valid date" in response.data
     # date must be unchanged
-    row = db.execute("SELECT session_date FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    row = db.execute(
+        "SELECT session_date FROM sessions WHERE id = ?", (session_id,)
+    ).fetchone()
     assert row["session_date"] == "2026-03-31"
 
 
@@ -237,4 +250,3 @@ def test_edit_session_404_for_other_user(client, db):
     response = client.get("/sessions/9999/edit")
 
     assert response.status_code == 404
-

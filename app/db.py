@@ -83,4 +83,3 @@ def init_app(app):
     def init_db_command():
         init_db()
         print("Database initialized.")
-

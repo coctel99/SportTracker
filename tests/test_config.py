@@ -22,4 +22,3 @@ def test_production_requires_non_dev_secret(monkeypatch):
 
     with pytest.raises(RuntimeError):
         create_app({"TESTING": False})
-

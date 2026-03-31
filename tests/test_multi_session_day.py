@@ -37,6 +37,7 @@ def _log_session(client, date, exercise_id, reps):
 
 # ── training-day routing ──────────────────────────────────────────────────────
 
+
 def test_training_day_single_session_redirects_to_detail(client, db):
     """With one session on the day, /training-day/<date> redirects to session detail."""
     ex1, _ = _setup(client, db)
@@ -80,8 +81,8 @@ def test_training_day_multiple_sessions_shows_page(client, db):
 def test_training_day_shows_correct_rep_totals(client, db):
     """Each session card shows the correct total reps for its exercises."""
     ex1, ex2 = _setup(client, db)
-    _log_session(client, "2026-03-31", ex1, "10,8")   # 18 reps
-    _log_session(client, "2026-03-31", ex2, "12,10,8") # 30 reps
+    _log_session(client, "2026-03-31", ex1, "10,8")  # 18 reps
+    _log_session(client, "2026-03-31", ex2, "12,10,8")  # 30 reps
 
     response = client.get("/training-day/2026-03-31")
 
@@ -97,10 +98,11 @@ def test_training_day_requires_login(client, db):
 
 # ── Dashboard stats with multiple sessions ────────────────────────────────────
 
+
 def test_dashboard_total_reps_sums_all_sessions_today(client, db, app):
     """total_reps_today must aggregate across ALL sessions on the same day."""
-    from datetime import date
     import unittest.mock as mock
+    from datetime import date
 
     ex1, ex2 = _setup(client, db)
     today = date.today().isoformat()
@@ -144,4 +146,3 @@ def test_dashboard_calendar_shows_badge_for_multiple_sessions(client, db):
     # The badge showing "2" and the training-day link should both be present
     assert b"/training-day/2026-03-31" in response.data
     assert b"2 sessions" in response.data
-

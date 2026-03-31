@@ -11,8 +11,12 @@ def register_and_login(client):
 def _add_exercise(client, name="Squats", default_sets="", default_reps=""):
     return client.post(
         "/exercises",
-        data={"name": name, "default_sets": default_sets, "default_reps": default_reps,
-              "csrf_token": get_csrf_token(client, "/exercises")},
+        data={
+            "name": name,
+            "default_sets": default_sets,
+            "default_reps": default_reps,
+            "csrf_token": get_csrf_token(client, "/exercises"),
+        },
         follow_redirects=True,
     )
 
@@ -86,7 +90,9 @@ def test_add_exercise_rejects_invalid_defaults(client):
 def test_duplicate_exercise_shows_error(client):
     register_and_login(client)
     csrf = get_csrf_token(client, "/exercises")
-    client.post("/exercises", data={"name": "Plank", "csrf_token": csrf}, follow_redirects=True)
+    client.post(
+        "/exercises", data={"name": "Plank", "csrf_token": csrf}, follow_redirects=True
+    )
 
     response = client.post(
         "/exercises",
@@ -99,10 +105,13 @@ def test_duplicate_exercise_shows_error(client):
 
 # ── Edit exercise ─────────────────────────────────────────────────────────────
 
+
 def test_edit_exercise_page_loads(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Squats'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Squats'"
+    ).fetchone()["id"]
 
     response = client.get(f"/exercises/{exercise_id}/edit")
 
@@ -113,12 +122,18 @@ def test_edit_exercise_page_loads(client, db):
 def test_edit_exercise_updates_name(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Squats'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Squats'"
+    ).fetchone()["id"]
 
     response = client.post(
         f"/exercises/{exercise_id}/edit",
-        data={"name": "Barbell Squat", "default_sets": "4", "default_reps": "8",
-              "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit")},
+        data={
+            "name": "Barbell Squat",
+            "default_sets": "4",
+            "default_reps": "8",
+            "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit"),
+        },
         follow_redirects=True,
     )
 
@@ -133,17 +148,24 @@ def test_edit_exercise_updates_name(client, db):
 def test_edit_exercise_rejects_empty_name(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Squats'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Squats'"
+    ).fetchone()["id"]
 
     response = client.post(
         f"/exercises/{exercise_id}/edit",
-        data={"name": "", "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit")},
+        data={
+            "name": "",
+            "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit"),
+        },
         follow_redirects=True,
     )
 
     assert b"Exercise name is required." in response.data
     # name must be unchanged in DB
-    row = db.execute("SELECT name FROM exercises WHERE id = ?", (exercise_id,)).fetchone()
+    row = db.execute(
+        "SELECT name FROM exercises WHERE id = ?", (exercise_id,)
+    ).fetchone()
     assert row["name"] == "Squats"
 
 
@@ -151,11 +173,16 @@ def test_edit_exercise_rejects_duplicate_name(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
     _add_exercise(client, "Lunges")
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Squats'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Squats'"
+    ).fetchone()["id"]
 
     response = client.post(
         f"/exercises/{exercise_id}/edit",
-        data={"name": "Lunges", "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit")},
+        data={
+            "name": "Lunges",
+            "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit"),
+        },
         follow_redirects=True,
     )
 
@@ -165,12 +192,17 @@ def test_edit_exercise_rejects_duplicate_name(client, db):
 def test_edit_exercise_rejects_invalid_sets(client, db):
     register_and_login(client)
     _add_exercise(client, "Squats")
-    exercise_id = db.execute("SELECT id FROM exercises WHERE name = 'Squats'").fetchone()["id"]
+    exercise_id = db.execute(
+        "SELECT id FROM exercises WHERE name = 'Squats'"
+    ).fetchone()["id"]
 
     response = client.post(
         f"/exercises/{exercise_id}/edit",
-        data={"name": "Squats", "default_sets": "0",
-              "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit")},
+        data={
+            "name": "Squats",
+            "default_sets": "0",
+            "csrf_token": get_csrf_token(client, f"/exercises/{exercise_id}/edit"),
+        },
         follow_redirects=True,
     )
 
@@ -183,4 +215,3 @@ def test_edit_exercise_404_for_other_user(client, db):
     response = client.get("/exercises/9999/edit")
 
     assert response.status_code == 404
-

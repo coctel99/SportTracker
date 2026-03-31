@@ -5,10 +5,14 @@ from app.db import get_db
 
 def get_exercises_for_user(user_id: int):
     """Return all exercises available for the session form."""
-    return get_db().execute(
-        "SELECT id, name, default_sets, default_reps FROM exercises WHERE user_id = ? ORDER BY name",
-        (user_id,),
-    ).fetchall()
+    return (
+        get_db()
+        .execute(
+            "SELECT id, name, default_sets, default_reps FROM exercises WHERE user_id = ? ORDER BY name",
+            (user_id,),
+        )
+        .fetchall()
+    )
 
 
 def save_session(user_id: int, session_date: str, rows: list[tuple]) -> int:
@@ -57,10 +61,14 @@ def save_session(user_id: int, session_date: str, rows: list[tuple]) -> int:
 
 def get_session_for_user(session_id: int, user_id: int):
     """Return the session row if it belongs to *user_id*, else None."""
-    return get_db().execute(
-        "SELECT id, session_date FROM sessions WHERE id = ? AND user_id = ?",
-        (session_id, user_id),
-    ).fetchone()
+    return (
+        get_db()
+        .execute(
+            "SELECT id, session_date FROM sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        )
+        .fetchone()
+    )
 
 
 def get_session_detail(session_id: int) -> list:
@@ -69,8 +77,10 @@ def get_session_detail(session_id: int) -> list:
     Each row has: exercise_name, set_number, reps.
     Results are ordered by position then set_number.
     """
-    return get_db().execute(
-        """
+    return (
+        get_db()
+        .execute(
+            """
         SELECT e.name AS exercise_name,
                se.position,
                es.set_number,
@@ -81,8 +91,10 @@ def get_session_detail(session_id: int) -> list:
         WHERE se.session_id = ?
         ORDER BY se.position ASC, es.set_number ASC
         """,
-        (session_id,),
-    ).fetchall()
+            (session_id,),
+        )
+        .fetchall()
+    )
 
 
 def delete_session(session_id: int, user_id: int) -> None:
@@ -95,7 +107,9 @@ def delete_session(session_id: int, user_id: int) -> None:
     db.commit()
 
 
-def update_session(session_id: int, user_id: int, session_date: str, rows: list[tuple]) -> None:
+def update_session(
+    session_id: int, user_id: int, session_date: str, rows: list[tuple]
+) -> None:
     """Replace all exercises/sets for an existing session atomically.
 
     Deletes the existing session_exercises (cascades to exercise_sets) and
@@ -136,8 +150,10 @@ def update_session(session_id: int, user_id: int, session_date: str, rows: list[
 
 def get_session_detail_for_edit(session_id: int) -> list:
     """Return exercises with their set reps grouped, for pre-filling the edit form."""
-    rows = get_db().execute(
-        """
+    rows = (
+        get_db()
+        .execute(
+            """
         SELECT se.exercise_id, e.name AS exercise_name,
                se.position, es.reps
         FROM session_exercises se
@@ -146,13 +162,21 @@ def get_session_detail_for_edit(session_id: int) -> list:
         WHERE se.session_id = ?
         ORDER BY se.position ASC, es.set_number ASC
         """,
-        (session_id,),
-    ).fetchall()
+            (session_id,),
+        )
+        .fetchall()
+    )
     # group into [{exercise_id, name, sets:[reps,...]}]
     grouped = []
     for row in rows:
         if not grouped or grouped[-1]["exercise_id"] != row["exercise_id"]:
-            grouped.append({"exercise_id": row["exercise_id"], "name": row["exercise_name"], "sets": []})
+            grouped.append(
+                {
+                    "exercise_id": row["exercise_id"],
+                    "name": row["exercise_name"],
+                    "sets": [],
+                }
+            )
         grouped[-1]["sets"].append(row["reps"])
     return grouped
 

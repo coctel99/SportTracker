@@ -5,10 +5,14 @@ from app.db import get_db
 
 def list_exercises(user_id: int):
     """Return all exercises for *user_id* ordered by name."""
-    return get_db().execute(
-        "SELECT * FROM exercises WHERE user_id = ? ORDER BY name ASC",
-        (user_id,),
-    ).fetchall()
+    return (
+        get_db()
+        .execute(
+            "SELECT * FROM exercises WHERE user_id = ? ORDER BY name ASC",
+            (user_id,),
+        )
+        .fetchall()
+    )
 
 
 def create_exercise(
@@ -70,7 +74,11 @@ def update_exercise(
 
 def get_exercise(exercise_id: int, user_id: int):
     """Return the exercise row owned by *user_id*, or None."""
-    return get_db().execute(
-        "SELECT * FROM exercises WHERE id = ? AND user_id = ?",
-        (exercise_id, user_id),
-    ).fetchone()
+    return (
+        get_db()
+        .execute(
+            "SELECT * FROM exercises WHERE id = ? AND user_id = ?",
+            (exercise_id, user_id),
+        )
+        .fetchone()
+    )

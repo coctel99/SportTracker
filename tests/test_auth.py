@@ -38,7 +38,11 @@ def test_register_rejects_invalid_email(client):
     csrf_token = get_csrf_token(client, "/register")
     response = client.post(
         "/register",
-        data={"email": "not-an-email", "password": "secret12", "csrf_token": csrf_token},
+        data={
+            "email": "not-an-email",
+            "password": "secret12",
+            "csrf_token": csrf_token,
+        },
         follow_redirects=True,
     )
     assert b"valid email" in response.data

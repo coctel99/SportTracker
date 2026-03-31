@@ -54,7 +54,9 @@ def test_log_session_rejects_invalid_date(client, db):
         follow_redirects=True,
     )
 
-    sessions_count = db.execute("SELECT COUNT(*) AS count FROM sessions").fetchone()["count"]
+    sessions_count = db.execute("SELECT COUNT(*) AS count FROM sessions").fetchone()[
+        "count"
+    ]
     assert b"Session date must be a valid date." in response.data
     assert sessions_count == 0
 
@@ -73,7 +75,9 @@ def test_log_session_rejects_invalid_reps(client, db):
         follow_redirects=True,
     )
 
-    sessions_count = db.execute("SELECT COUNT(*) AS count FROM sessions").fetchone()["count"]
+    sessions_count = db.execute("SELECT COUNT(*) AS count FROM sessions").fetchone()[
+        "count"
+    ]
     assert b"Reps must be comma-separated whole numbers." in response.data
     assert sessions_count == 0
 

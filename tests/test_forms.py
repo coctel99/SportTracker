@@ -2,10 +2,14 @@
 
 import pytest
 
-from app.tracker.sessions.forms import parse_optional_int, parse_reps_list, parse_session_date
-
+from app.tracker.sessions.forms import (
+    parse_optional_int,
+    parse_reps_list,
+    parse_session_date,
+)
 
 # ── parse_optional_int ────────────────────────────────────────────────────────
+
 
 def test_parse_optional_int_empty_returns_none():
     assert parse_optional_int("", "Sets", 1) is None
@@ -31,8 +35,10 @@ def test_parse_optional_int_non_integer():
 
 # ── parse_session_date ────────────────────────────────────────────────────────
 
+
 def test_parse_session_date_empty_returns_today():
     from datetime import date
+
     assert parse_session_date("") == date.today().isoformat()
 
 
@@ -50,6 +56,7 @@ def test_parse_session_date_strips_whitespace():
 
 
 # ── parse_reps_list ───────────────────────────────────────────────────────────
+
 
 def test_parse_reps_list_valid():
     assert parse_reps_list("10,8,6") == [10, 8, 6]
@@ -80,4 +87,3 @@ def test_parse_reps_list_non_integer_raises():
 def test_parse_reps_list_negative_raises():
     with pytest.raises(ValueError, match="negative"):
         parse_reps_list("10,-1,6")
-
