@@ -101,7 +101,6 @@ def test_training_day_requires_login(client, db):
 
 def test_dashboard_total_reps_sums_all_sessions_today(client, db, app):
     """total_reps_today must aggregate across ALL sessions on the same day."""
-    import unittest.mock as mock
     from datetime import date
 
     ex1, ex2 = _setup(client, db)

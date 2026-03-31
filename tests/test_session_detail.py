@@ -246,7 +246,7 @@ def test_edit_session_rejects_no_exercises(client, db):
 def test_edit_session_404_for_other_user(client, db):
     register_login_add_session(client, db)
 
-    csrf = get_csrf_token(client, "/dashboard")
+    _ = get_csrf_token(client, "/dashboard")
     response = client.get("/sessions/9999/edit")
 
     assert response.status_code == 404
