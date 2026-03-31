@@ -41,7 +41,12 @@ def index():
 @bp.route("/dashboard")
 @login_required
 def dashboard():
-    stats = get_dashboard_stats(g.user["id"])
+    try:
+        year = int(request.args["year"]) if "year" in request.args else None
+        month = int(request.args["month"]) if "month" in request.args else None
+    except (ValueError, KeyError):
+        year, month = None, None
+    stats = get_dashboard_stats(g.user["id"], year=year, month=month)
     return render_template("dashboard.html", **stats)
 
 
@@ -117,7 +122,7 @@ def edit_exercise_view(exercise_id):
 @login_required
 def new_session():
     user_id = g.user["id"]
-    today = date.today().isoformat()
+    today = request.args.get("date", date.today().isoformat())
     exercises_list = get_exercises_for_user(user_id)
 
     def _render():
