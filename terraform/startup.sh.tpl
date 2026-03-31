@@ -9,17 +9,14 @@ usermod -aG docker ${ssh_user}
 # nginx
 apt-get install -y nginx
 
-# GitHub Actions deploy key
+# GitHub Actions deploy key (for CD: GitHub Actions → VM)
 mkdir -p /home/${ssh_user}/.ssh
 echo '${deploy_public_key}' >> /home/${ssh_user}/.ssh/authorized_keys
 chmod 700 /home/${ssh_user}/.ssh
 chmod 600 /home/${ssh_user}/.ssh/authorized_keys
 chown -R ${ssh_user}:${ssh_user} /home/${ssh_user}/.ssh
 
-# Trust GitHub for git pull
-sudo -u ${ssh_user} ssh-keyscan github.com >> /home/${ssh_user}/.ssh/known_hosts
-
-# Clone repo
+# Clone repo (public repo — HTTPS, no credentials needed)
 sudo -u ${ssh_user} git clone ${github_repo} ${app_dir}
 
 # Write .env
