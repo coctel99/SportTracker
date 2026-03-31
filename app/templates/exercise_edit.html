@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Edit {{ exercise['name'] }} – Sport Tracker{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center gap-3">
+  <a href="{{ url_for('routes.exercises') }}"
+     class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Edit exercise</h1>
+    <p class="text-sm text-gray-500 mt-0.5">{{ exercise['name'] }}</p>
+  </div>
+</div>
+
+<div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
+  <form method="post" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="sm:col-span-1">
+        <label for="exercise-name" class="block text-sm font-medium text-gray-700 mb-1">
+          Name <span class="text-red-500">*</span>
+        </label>
+        <input id="exercise-name" name="name" type="text" required
+               value="{{ request.form.get('name', exercise['name']) }}"
+               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                      text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                      focus:ring-2 focus:ring-indigo-200 transition">
+      </div>
+
+      <div>
+        <label for="default-sets" class="block text-sm font-medium text-gray-700 mb-1">Default sets</label>
+        <input id="default-sets" name="default_sets" type="number" min="1"
+               value="{{ request.form.get('default_sets', exercise['default_sets'] or '') }}"
+               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                      text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                      focus:ring-2 focus:ring-indigo-200 transition">
+      </div>
+
+      <div>
+        <label for="default-reps" class="block text-sm font-medium text-gray-700 mb-1">Default reps</label>
+        <input id="default-reps" name="default_reps" type="number" min="0"
+               value="{{ request.form.get('default_reps', exercise['default_reps'] or '') }}"
+               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                      text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                      focus:ring-2 focus:ring-indigo-200 transition">
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-1">
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold
+                     text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+        Save changes
+      </button>
+      <a href="{{ url_for('routes.exercises') }}"
+         class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5
+                text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+

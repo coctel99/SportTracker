@@ -54,3 +54,67 @@ def get_chart_data(exercise_id: int, user_id: int) -> dict:
         "reps":   [row["reps_total"]   for row in rows],
     }
 
+
+def get_top_exercises_chart_data(user_id: int, limit: int = 10) -> dict:
+    """Return a multi-series dataset for the top *limit* exercises by total reps.
+
+    Returns a dict with:
+      ``labels``   – sorted list of all session dates across those exercises
+      ``series``   – list of {name, data} where data aligns with labels (0 for missing dates)
+    """
+    db = get_db()
+
+    # Top exercises by total reps
+    top = db.execute(
+        """
+        SELECT e.id, e.name, COALESCE(SUM(es.reps), 0) AS total_reps
+        FROM exercises e
+        LEFT JOIN session_exercises se ON se.exercise_id = e.id
+        LEFT JOIN exercise_sets es     ON es.session_exercise_id = se.id
+        WHERE e.user_id = ?
+        GROUP BY e.id, e.name
+        ORDER BY total_reps DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+
+    if not top:
+        return {"labels": [], "series": []}
+
+    top_ids = [row["id"] for row in top]
+
+    # All (exercise_id, session_date, reps_total) rows for those exercises
+    placeholders = ",".join("?" * len(top_ids))
+    rows = db.execute(
+        f"""
+        SELECT se.exercise_id,
+               s.session_date,
+               COALESCE(SUM(es.reps), 0) AS reps_total
+        FROM sessions s
+        JOIN session_exercises se ON se.session_id = s.id
+        JOIN exercise_sets es     ON es.session_exercise_id = se.id
+        WHERE s.user_id = ? AND se.exercise_id IN ({placeholders})
+        GROUP BY se.exercise_id, s.session_date
+        ORDER BY s.session_date ASC
+        """,
+        (user_id, *top_ids),
+    ).fetchall()
+
+    # Collect all unique dates
+    all_dates = sorted({row["session_date"] for row in rows})
+
+    # Build per-exercise lookup: {exercise_id: {date: reps}}
+    lookup: dict[int, dict[str, int]] = {eid: {} for eid in top_ids}
+    for row in rows:
+        lookup[row["exercise_id"]][row["session_date"]] = row["reps_total"]
+
+    series = [
+        {
+            "name": ex["name"],
+            "data": [lookup[ex["id"]].get(d, 0) for d in all_dates],
+        }
+        for ex in top
+    ]
+
+    return {"labels": all_dates, "series": series}

@@ -4,7 +4,7 @@
 
 <div class="mb-6">
   <h1 class="text-2xl font-bold text-gray-900">Log Session</h1>
-  <p class="text-sm text-gray-500 mt-0.5">Tap an exercise to add it to today's session</p>
+  <p class="text-sm text-gray-500 mt-0.5">Pick exercises, then enter your sets &amp; reps</p>
 </div>
 
 {% if not exercises %}
@@ -32,100 +32,179 @@
   <form method="post" id="session-form" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <!-- Date picker -->
-    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
-      <label for="session-date" class="block text-sm font-medium text-gray-700 mb-1">Session date</label>
-      <input id="session-date" type="date" name="session_date"
-             value="{{ request.form.get('session_date', today) }}"
-             class="block w-full sm:w-48 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                    text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
-                    focus:ring-2 focus:ring-indigo-200 transition">
-    </div>
+    <!-- ── Step 1: Date + Exercise picker ──────────────────────────────── -->
+    <div id="step-1">
 
-    <!-- Exercise picker -->
-    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-base font-semibold text-gray-900">Pick exercises</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Tap a card to select it, then fill in your reps</p>
-        </div>
-        <span id="selected-count"
-              class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-          0 selected
-        </span>
-      </div>
-
-      <!-- Validation message -->
-      <p id="no-exercise-msg"
-         class="hidden mb-3 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-        </svg>
-        Select at least one exercise before saving.
-      </p>
-
-      <!-- Exercise cards grid -->
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {% for e in exercises %}
-          <div class="exercise-card group relative flex flex-col gap-2 cursor-pointer rounded-xl border-2
-                      border-gray-200 bg-white p-4 transition-all duration-150 select-none
-                      hover:border-indigo-400 hover:shadow-md"
-               data-exercise-id="{{ e['id'] }}"
-               data-default-reps="{{ e['default_reps'] or '' }}">
-
-            <!-- Checkmark (visible when active) -->
-            <span class="card-check absolute top-2.5 right-2.5 hidden h-5 w-5 items-center
-                         justify-center rounded-full bg-indigo-600 text-white">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+      <!-- Date -->
+      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
+        <label for="session-date" class="block text-sm font-medium text-gray-700 mb-1">Session date</label>
+        <div class="inline-flex items-center gap-2">
+          <input id="session-date" type="date" name="session_date"
+                 value="{{ request.form.get('session_date', today) }}"
+                 class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                        text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                        focus:ring-2 focus:ring-indigo-200 transition">
+          <div class="flex flex-col gap-0.5">
+            <button type="button" id="date-up"
+                    class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white
+                           text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95"
+                    aria-label="Next day">
+              <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>
               </svg>
-            </span>
-
-            <!-- Exercise name -->
-            <p class="pr-7 text-sm font-semibold text-gray-900">{{ e['name'] }}</p>
-            {% if e['default_sets'] or e['default_reps'] %}
-              <p class="text-xs text-gray-400">
-                Default: {{ e['default_sets'] or '–' }} sets × {{ e['default_reps'] or '–' }} reps
-              </p>
-            {% endif %}
-
-            <!-- Reps input (hidden until card is active) -->
-            <div class="reps-row hidden mt-1">
-              <label class="block text-xs font-medium text-gray-600 mb-1">
-                Reps per set <span class="text-gray-400 font-normal">(comma-separated, e.g. 12,10,8)</span>
-              </label>
-              <input type="text"
-                     class="reps-input block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                            text-gray-900 placeholder:text-gray-400 shadow-sm
-                            focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                     placeholder="{{ e['default_reps'] ~ ',...' if e['default_reps'] else '12,10,8' }}"
-                     disabled>
-              <!-- Real form fields – only enabled & submitted when card is active -->
-              <input type="hidden" name="exercise_id[]" class="hidden-exercise-id"
-                     value="{{ e['id'] }}" disabled>
-              <input type="hidden" name="reps[]" class="hidden-reps" disabled>
-            </div>
+            </button>
+            <button type="button" id="date-down"
+                    class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white
+                           text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95"
+                    aria-label="Previous day">
+              <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+              </svg>
+            </button>
           </div>
-        {% endfor %}
+        </div>
       </div>
-    </div>
 
-    <!-- Submit -->
-    <div class="flex items-center gap-3">
-      <button type="submit"
-              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
-                     text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+      <!-- Exercise picker -->
+      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">1</span>
+              Choose exercises
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5 ml-8">Tap a card to add it to your session</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="selected-count"
+                  class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 transition-all">
+              0 selected
+            </span>
+            <a href="{{ url_for('routes.exercises') }}"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
+                      text-xs font-semibold text-gray-600 hover:bg-gray-50 transition active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+              </svg>
+              New exercise
+            </a>
+          </div>
+        </div>
+
+        <!-- Validation message -->
+        <div id="no-exercise-msg"
+             class="hidden mb-3 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          Select at least one exercise before continuing.
+        </div>
+
+        <!-- Exercise cards grid -->
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" id="exercise-grid">
+          {% for e in exercises %}
+            <button type="button"
+                    class="exercise-card relative flex flex-col items-start gap-1 rounded-xl border-2
+                           border-gray-200 bg-white p-3.5 text-left transition-all duration-150
+                           hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    data-exercise-id="{{ e['id'] }}"
+                    data-exercise-name="{{ e['name'] }}"
+                    data-default-sets="{{ e['default_sets'] or '' }}"
+                    data-default-reps="{{ e['default_reps'] or '' }}">
+
+              <!-- Checkmark badge -->
+              <span class="card-check absolute top-2 right-2 hidden h-5 w-5 items-center
+                           justify-center rounded-full bg-indigo-600 text-white">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+              </span>
+
+              <p class="pr-6 text-sm font-semibold text-gray-900 leading-snug">{{ e['name'] }}</p>
+              {% if e['default_sets'] or e['default_reps'] %}
+                <p class="text-xs text-gray-400">
+                  {{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}
+                </p>
+              {% endif %}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Continue button -->
+      <div class="flex items-center gap-3">
+        <button type="button" id="btn-continue"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
+                       text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+          Continue
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+          </svg>
+        </button>
+        <a href="{{ url_for('routes.dashboard') }}"
+           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5
+                  text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
+          Cancel
+        </a>
+      </div>
+
+    </div><!-- /step-1 -->
+
+    <!-- ── Step 2: Sets & reps entry ───────────────────────────────────── -->
+    <div id="step-2" class="hidden">
+
+      <!-- Back link -->
+      <button type="button" id="btn-back"
+              class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition mb-5">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
         </svg>
-        Save session
+        Back to exercise selection
       </button>
-      <a href="{{ url_for('routes.dashboard') }}"
-         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5
-                text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
-        Cancel
-      </a>
-    </div>
+
+      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">2</span>
+          Enter sets &amp; reps
+        </h2>
+        <p class="text-xs text-gray-400 mb-5 ml-8">For each exercise, set the number of sets and reps per set</p>
+
+        <!-- Per-exercise entry panels – injected by JS -->
+        <div id="sets-panels" class="space-y-5"></div>
+      </div>
+
+      <!-- Hidden inputs submitted to server -->
+      <div id="hidden-fields" aria-hidden="true"></div>
+
+      <!-- Submit -->
+      <div class="flex flex-col gap-3">
+        <!-- Validation message -->
+        <div id="no-reps-msg"
+             class="hidden flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          Please fill in the reps for every set before saving.
+        </div>
+        <div class="flex items-center gap-3">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
+                       text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Save session
+        </button>
+        <a href="{{ url_for('routes.dashboard') }}"
+           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5
+                  text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
+          Cancel
+        </a>
+        </div>
+      </div><!-- /submit -->
+
+    </div><!-- /step-2 -->
+
   </form>
 
 {% endif %}
@@ -134,94 +213,241 @@
 
 {% block scripts %}
 <script>
-  // Extend main.js card logic for this page
-  document.addEventListener('DOMContentLoaded', () => {
-    const form        = document.getElementById('session-form');
-    if (!form) return;
+document.addEventListener('DOMContentLoaded', () => {
+  const form       = document.getElementById('session-form');
+  if (!form) return;
 
-    const cards       = form.querySelectorAll('.exercise-card');
-    const countBadge  = document.getElementById('selected-count');
-    const noExMsg     = document.getElementById('no-exercise-msg');
+  // ── Date stepper ─────────────────────────────────────────────────────────
+  const dateInput = document.getElementById('session-date');
+  function stepDate(days) {
+    const current = dateInput.value ? new Date(dateInput.value + 'T00:00:00') : new Date();
+    current.setDate(current.getDate() + days);
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const d = String(current.getDate()).padStart(2, '0');
+    dateInput.value = `${y}-${m}-${d}`;
+  }
+  document.getElementById('date-up').addEventListener('click', e => { e.preventDefault(); stepDate(+1); });
+  document.getElementById('date-down').addEventListener('click', e => { e.preventDefault(); stepDate(-1); });
 
-    function updateCount() {
-      const n = form.querySelectorAll('.exercise-card.active').length;
-      countBadge.textContent = n + ' selected';
-      countBadge.classList.toggle('bg-indigo-100', n > 0);
-      countBadge.classList.toggle('text-indigo-800', n > 0);
-    }
+  const step1      = document.getElementById('step-1');
+  const step2      = document.getElementById('step-2');
+  const btnCont    = document.getElementById('btn-continue');
+  const btnBack    = document.getElementById('btn-back');
+  const noExMsg    = document.getElementById('no-exercise-msg');
+  const countBadge = document.getElementById('selected-count');
+  const setPanels  = document.getElementById('sets-panels');
+  const hiddenFlds = document.getElementById('hidden-fields');
 
-    cards.forEach(card => {
-      card.addEventListener('click', e => {
-        // Don't toggle when user is typing in the reps input
-        if (e.target.tagName === 'INPUT') return;
+  // ── Step 1: exercise card toggle ────────────────────────────────────────
+  const cards = form.querySelectorAll('.exercise-card');
 
-        const isActive    = card.classList.toggle('active');
-        const check       = card.querySelector('.card-check');
-        const repsRow     = card.querySelector('.reps-row');
-        const repsInput   = card.querySelector('.reps-input');
-        const hiddenId    = card.querySelector('.hidden-exercise-id');
-        const hiddenReps  = card.querySelector('.hidden-reps');
+  function selectedCards() {
+    return [...cards].filter(c => c.classList.contains('active'));
+  }
 
-        if (isActive) {
-          check.classList.remove('hidden');
-          check.classList.add('flex');
-          repsRow.classList.remove('hidden');
-          repsInput.disabled = false;
-          hiddenId.disabled  = false;
-          hiddenReps.disabled = false;
-          // Pre-fill with default reps if available
-          if (!repsInput.value && card.dataset.defaultReps) {
-            repsInput.value = card.dataset.defaultReps;
-          }
-          repsInput.focus();
-          card.classList.add('border-indigo-600', 'bg-indigo-50');
-          card.classList.remove('border-gray-200');
-        } else {
-          check.classList.add('hidden');
-          check.classList.remove('flex');
-          repsRow.classList.add('hidden');
-          repsInput.disabled  = true;
-          hiddenId.disabled   = true;
-          hiddenReps.disabled = true;
-          repsInput.value     = '';
-          card.classList.remove('border-indigo-600', 'bg-indigo-50');
-          card.classList.add('border-gray-200');
-        }
-        updateCount();
-      });
+  function updateBadge() {
+    const n = selectedCards().length;
+    countBadge.textContent = n === 0 ? '0 selected' : n + ' selected';
+    countBadge.className = n > 0
+      ? 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 transition-all'
+      : 'inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 transition-all';
+  }
 
-      // Keep hidden reps field in sync with visible input
-      const repsInput  = card.querySelector('.reps-input');
-      const hiddenReps = card.querySelector('.hidden-reps');
-      repsInput.addEventListener('input', () => {
-        hiddenReps.value = repsInput.value;
-      });
-    });
-
-    form.addEventListener('submit', e => {
-      const active = form.querySelectorAll('.exercise-card.active');
-      if (active.length === 0) {
-        e.preventDefault();
-        noExMsg.classList.remove('hidden');
-        noExMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      const active = card.classList.toggle('active');
+      const check  = card.querySelector('.card-check');
+      if (active) {
+        check.classList.remove('hidden');
+        check.classList.add('flex');
+        card.classList.add('border-indigo-600', 'bg-indigo-50');
+        card.classList.remove('border-gray-200');
+      } else {
+        check.classList.add('hidden');
+        check.classList.remove('flex');
+        card.classList.remove('border-indigo-600', 'bg-indigo-50');
+        card.classList.add('border-gray-200');
       }
       noExMsg.classList.add('hidden');
-      // Validate reps filled for every active card
-      for (const card of active) {
-        const reps = card.querySelector('.reps-input');
-        if (!reps.value.trim()) {
-          e.preventDefault();
-          reps.focus();
-          reps.classList.add('border-red-400', 'ring-2', 'ring-red-200');
-          reps.addEventListener('input', () =>
-            reps.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
-          return;
-        }
-        // Sync hidden field one last time
-        card.querySelector('.hidden-reps').value = reps.value;
-      }
+      updateBadge();
     });
   });
+
+  // ── Step 1 → Step 2 ─────────────────────────────────────────────────────
+  btnCont.addEventListener('click', () => {
+    const sel = selectedCards();
+    if (sel.length === 0) {
+      noExMsg.classList.remove('hidden');
+      noExMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    buildStep2(sel);
+    step1.classList.add('hidden');
+    step2.classList.remove('hidden');
+    step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ── Step 2 → Step 1 ─────────────────────────────────────────────────────
+  btnBack.addEventListener('click', () => {
+    step2.classList.add('hidden');
+    step1.classList.remove('hidden');
+  });
+
+  // ── Build Step-2 panels ──────────────────────────────────────────────────
+  function buildStep2(sel) {
+    setPanels.innerHTML  = '';
+    hiddenFlds.innerHTML = '';
+
+    sel.forEach((card, idx) => {
+      const exId          = card.dataset.exerciseId;
+      const exName        = card.dataset.exerciseName;
+      const defaultSets   = parseInt(card.dataset.defaultSets, 10) || 1;
+      const defaultReps   = parseInt(card.dataset.defaultReps, 10) || '';
+
+      // ── panel ────────────────────────────────────────────────────────────
+      const panel = document.createElement('div');
+      panel.className = 'rounded-xl border border-gray-200 bg-gray-50 p-4';
+      panel.dataset.idx = idx;
+
+      panel.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+          <span class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white text-xs">${idx + 1}</span>
+            ${exName}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-3 mb-4">
+          <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sets</label>
+          <div class="flex items-center gap-1">
+            <button type="button" class="btn-dec w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
+                                         hover:bg-gray-100 transition text-lg leading-none flex items-center justify-center">−</button>
+            <input type="number" class="sets-input w-14 rounded-lg border border-gray-300 bg-white px-2 py-1.5
+                                        text-center text-sm font-semibold text-gray-900
+                                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                   value="${defaultSets}" min="1" max="20">
+            <button type="button" class="btn-inc w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
+                                         hover:bg-gray-100 transition text-lg leading-none flex items-center justify-center">+</button>
+          </div>
+        </div>
+
+        <div class="reps-rows space-y-2 max-w-xs"></div>
+      `;
+
+      setPanels.appendChild(panel);
+
+      const setsInput = panel.querySelector('.sets-input');
+      const repsRows  = panel.querySelector('.reps-rows');
+
+      let prevCount = 0;
+
+      // render reps inputs for current set count
+      function renderReps(focusLast = false) {
+        const count = Math.max(1, Math.min(20, parseInt(setsInput.value, 10) || 1));
+        setsInput.value = count;
+
+        // preserve existing values
+        const existing = [...repsRows.querySelectorAll('.rep-input')].map(i => i.value);
+        repsRows.innerHTML = '';
+
+        for (let s = 0; s < count; s++) {
+          const row = document.createElement('div');
+          row.className = 'flex items-center gap-3';
+          row.innerHTML = `
+            <span class="w-14 text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
+            <input type="number"
+                   class="rep-input w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                          font-medium text-gray-900 text-center
+                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+                   placeholder="reps" min="0"
+                   value="${existing[s] !== undefined ? existing[s] : (defaultReps !== '' ? defaultReps : '')}">
+          `;
+          repsRows.appendChild(row);
+        }
+
+        // focus the last row when a set was just added, or the first input of the first exercise on initial build
+        if (focusLast) {
+          const allInputs = repsRows.querySelectorAll('.rep-input');
+          const lastInput = allInputs[allInputs.length - 1];
+          if (lastInput) requestAnimationFrame(() => requestAnimationFrame(() => lastInput.focus()));
+        } else if (idx === 0 && prevCount === 0) {
+          const firstInput = repsRows.querySelector('.rep-input');
+          if (firstInput) requestAnimationFrame(() => requestAnimationFrame(() => firstInput.focus()));
+        }
+
+        prevCount = count;
+      }
+
+      renderReps();
+
+      panel.querySelector('.btn-dec').addEventListener('click', () => {
+        setsInput.value = Math.max(1, parseInt(setsInput.value, 10) - 1);
+        renderReps(false);
+      });
+      panel.querySelector('.btn-inc').addEventListener('click', (e) => {
+        e.currentTarget.blur();
+        setsInput.value = Math.min(20, parseInt(setsInput.value, 10) + 1);
+        renderReps(true);
+      });
+      setsInput.addEventListener('change', () => renderReps(false));
+
+      // hidden fields (exercise_id[] and reps[]) added per exercise
+      const hId   = document.createElement('input');
+      hId.type    = 'hidden';
+      hId.name    = 'exercise_id[]';
+      hId.value   = exId;
+      hiddenFlds.appendChild(hId);
+
+      const hReps  = document.createElement('input');
+      hReps.type   = 'hidden';
+      hReps.name   = 'reps[]';
+      hReps.dataset.panelIdx = idx;
+      hiddenFlds.appendChild(hReps);
+    });
+  }
+
+  // ── Submit: collect reps, validate, populate hidden fields ──────────────
+  const noRepsMsg = document.getElementById('no-reps-msg');
+
+  form.addEventListener('submit', e => {
+    const panels = [...setPanels.querySelectorAll('[data-idx]')];
+    if (panels.length === 0) {
+      e.preventDefault();
+      return;
+    }
+
+    let firstError = null;
+
+    panels.forEach((panel, idx) => {
+      const repInputs = [...panel.querySelectorAll('.rep-input')];
+      const vals = [];
+      repInputs.forEach(inp => {
+        const v = inp.value.trim();
+        if (v === '' || isNaN(parseInt(v, 10)) || parseInt(v, 10) < 0) {
+          inp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+          inp.addEventListener('input', () =>
+            inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (!firstError) firstError = inp;
+        } else {
+          inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
+          vals.push(parseInt(v, 10));
+        }
+      });
+
+      const hReps = hiddenFlds.querySelector(`[data-panel-idx="${idx}"]`);
+      if (hReps) hReps.value = vals.join(',');
+    });
+
+    if (firstError) {
+      e.preventDefault();
+      noRepsMsg.classList.remove('hidden');
+      noRepsMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      firstError.focus();
+    } else {
+      noRepsMsg.classList.add('hidden');
+    }
+  });
+});
 </script>
 {% endblock %}

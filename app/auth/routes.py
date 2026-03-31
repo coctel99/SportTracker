@@ -23,7 +23,7 @@ def register():
             except DuplicateEmailError:
                 error = "User already exists."
 
-        flash(error)
+        flash(error, "error")
 
     return render_template("register.html")
 
@@ -36,7 +36,7 @@ def login():
 
         user = authenticate_user(email, password)
         if user is None:
-            flash("Invalid credentials.")
+            flash("Invalid credentials.", "error")
         else:
             session.clear()
             session["user_id"] = user["id"]

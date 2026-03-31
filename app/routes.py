@@ -11,16 +11,18 @@ from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template
 
 from app.auth import login_required
 from app.tracker.dashboard.queries import get_dashboard_stats
-from app.tracker.exercises.queries import create_exercise, delete_exercise, list_exercises
+from app.tracker.exercises.queries import create_exercise, delete_exercise, get_exercise, list_exercises, update_exercise
 from app.tracker.sessions.forms import parse_optional_int, parse_reps_list, parse_session_date
 from app.tracker.sessions.queries import (
     delete_session,
     get_exercises_for_user,
     get_session_detail,
+    get_session_detail_for_edit,
     get_session_for_user,
     save_session,
+    update_session,
 )
-from app.tracker.progress.queries import get_chart_data, get_exercise_for_user, get_progress_summary
+from app.tracker.progress.queries import get_chart_data, get_exercise_for_user, get_progress_summary, get_top_exercises_chart_data
 
 bp = Blueprint("routes", __name__)
 
@@ -56,7 +58,7 @@ def exercises():
         raw_reps = request.form.get("default_reps", "").strip()
 
         if not name:
-            flash("Exercise name is required.")
+            flash("Exercise name is required.", "error")
         else:
             try:
                 default_sets = parse_optional_int(raw_sets, "Default sets", minimum=1)
@@ -64,9 +66,9 @@ def exercises():
                 create_exercise(user_id, name, default_sets, default_reps)
                 return redirect(url_for("routes.exercises"))
             except ValueError as exc:
-                flash(str(exc))
+                flash(str(exc), "error")
             except sqlite3.IntegrityError:
-                flash("Exercise with this name already exists.")
+                flash("Exercise with this name already exists.", "error")
 
     items = list_exercises(user_id)
     return render_template("exercises.html", exercises=items)
@@ -77,6 +79,36 @@ def exercises():
 def delete_exercise_view(exercise_id):
     delete_exercise(exercise_id, g.user["id"])
     return redirect(url_for("routes.exercises"))
+
+
+@bp.route("/exercises/<int:exercise_id>/edit", methods=("GET", "POST"))
+@login_required
+def edit_exercise_view(exercise_id):
+    user_id = g.user["id"]
+    exercise = get_exercise(exercise_id, user_id)
+    if exercise is None:
+        abort(404)
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        raw_sets = request.form.get("default_sets", "").strip()
+        raw_reps = request.form.get("default_reps", "").strip()
+
+        if not name:
+            flash("Exercise name is required.", "error")
+        else:
+            try:
+                default_sets = parse_optional_int(raw_sets, "Default sets", minimum=1)
+                default_reps = parse_optional_int(raw_reps, "Default reps", minimum=0)
+                update_exercise(exercise_id, user_id, name, default_sets, default_reps)
+                flash("Exercise updated.", "success")
+                return redirect(url_for("routes.exercises"))
+            except ValueError as exc:
+                flash(str(exc), "error")
+            except sqlite3.IntegrityError:
+                flash("Exercise with this name already exists.", "error")
+
+    return render_template("exercise_edit.html", exercise=exercise)
 
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
@@ -95,7 +127,7 @@ def new_session():
         try:
             session_date = parse_session_date(request.form.get("session_date", ""))
         except ValueError as exc:
-            flash(str(exc))
+            flash(str(exc), "error")
             return _render()
 
         exercise_ids = request.form.getlist("exercise_id[]")
@@ -104,7 +136,7 @@ def new_session():
         rows = []
 
         if not exercise_ids:
-            flash("Add at least one exercise row.")
+            flash("Add at least one exercise row.", "error")
             return _render()
 
         for idx, raw_id in enumerate(exercise_ids):
@@ -115,35 +147,35 @@ def new_session():
                 continue
 
             if not raw_id:
-                flash("Each session row must include an exercise.")
+                flash("Each session row must include an exercise.", "error")
                 return _render()
 
             try:
                 exercise_id = int(raw_id)
             except ValueError:
-                flash("Please choose a valid exercise.")
+                flash("Please choose a valid exercise.", "error")
                 return _render()
 
             if exercise_id not in allowed_ids:
-                flash("Please choose a valid exercise.")
+                flash("Please choose a valid exercise.", "error")
                 return _render()
 
             try:
                 reps_list = parse_reps_list(raw_reps)
             except ValueError as exc:
-                flash(str(exc))
+                flash(str(exc), "error")
                 return _render()
 
             rows.append((exercise_id, idx, reps_list))
 
         if not rows:
-            flash("Add at least one complete exercise row.")
+            flash("Add at least one complete exercise row.", "error")
             return _render()
 
         try:
             save_session(user_id, session_date, rows)
         except Exception:
-            flash("An error occurred while saving the session. Please try again.")
+            flash("An error occurred while saving the session. Please try again.", "error")
             return _render()
 
         return redirect(url_for("routes.dashboard"))
@@ -174,8 +206,82 @@ def delete_session_view(session_id):
     if sess is None:
         abort(404)
     delete_session(session_id, g.user["id"])
-    flash("Session deleted.")
+    flash("Session deleted.", "success")
     return redirect(url_for("routes.dashboard"))
+
+
+@bp.route("/sessions/<int:session_id>/edit", methods=("GET", "POST"))
+@login_required
+def edit_session_view(session_id):
+    user_id = g.user["id"]
+    sess = get_session_for_user(session_id, user_id)
+    if sess is None:
+        abort(404)
+
+    exercises_list = get_exercises_for_user(user_id)
+    existing = get_session_detail_for_edit(session_id)
+
+    def _render():
+        return render_template(
+            "session_edit.html",
+            session=sess,
+            exercises=exercises_list,
+            existing=existing,
+        )
+
+    if request.method == "POST":
+        try:
+            session_date = parse_session_date(request.form.get("session_date", ""))
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return _render()
+
+        exercise_ids = request.form.getlist("exercise_id[]")
+        reps_raw = request.form.getlist("reps[]")
+        allowed_ids = {row["id"] for row in exercises_list}
+        rows = []
+
+        if not exercise_ids:
+            flash("Add at least one exercise row.", "error")
+            return _render()
+
+        for idx, raw_id in enumerate(exercise_ids):
+            raw_id = raw_id.strip()
+            raw_reps = reps_raw[idx] if idx < len(reps_raw) else ""
+            if not raw_id and not raw_reps.strip():
+                continue
+            if not raw_id:
+                flash("Each row must include an exercise.", "error")
+                return _render()
+            try:
+                exercise_id = int(raw_id)
+            except ValueError:
+                flash("Please choose a valid exercise.", "error")
+                return _render()
+            if exercise_id not in allowed_ids:
+                flash("Please choose a valid exercise.", "error")
+                return _render()
+            try:
+                reps_list = parse_reps_list(raw_reps)
+            except ValueError as exc:
+                flash(str(exc), "error")
+                return _render()
+            rows.append((exercise_id, idx, reps_list))
+
+        if not rows:
+            flash("Add at least one complete exercise row.", "error")
+            return _render()
+
+        try:
+            update_session(session_id, user_id, session_date, rows)
+        except Exception:
+            flash("An error occurred while saving. Please try again.", "error")
+            return _render()
+
+        flash("Session updated.", "success")
+        return redirect(url_for("routes.session_detail", session_id=session_id))
+
+    return _render()
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────
@@ -204,3 +310,8 @@ def progress_data(exercise_id):
         return jsonify({"error": "not_found"}), 404
     return jsonify(get_chart_data(exercise_id, g.user["id"]))
 
+
+@bp.route("/api/progress/overview")
+@login_required
+def progress_overview():
+    return jsonify(get_top_exercises_chart_data(g.user["id"]))

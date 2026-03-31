@@ -6,7 +6,7 @@ from app.db import get_db
 def get_exercises_for_user(user_id: int):
     """Return all exercises available for the session form."""
     return get_db().execute(
-        "SELECT id, name, default_reps FROM exercises WHERE user_id = ? ORDER BY name",
+        "SELECT id, name, default_sets, default_reps FROM exercises WHERE user_id = ? ORDER BY name",
         (user_id,),
     ).fetchall()
 
@@ -93,3 +93,66 @@ def delete_session(session_id: int, user_id: int) -> None:
         (session_id, user_id),
     )
     db.commit()
+
+
+def update_session(session_id: int, user_id: int, session_date: str, rows: list[tuple]) -> None:
+    """Replace all exercises/sets for an existing session atomically.
+
+    Deletes the existing session_exercises (cascades to exercise_sets) and
+    re-inserts from *rows*, same format as save_session.
+    """
+    db = get_db()
+    try:
+        db.execute(
+            "UPDATE sessions SET session_date = ? WHERE id = ? AND user_id = ?",
+            (session_date, session_id, user_id),
+        )
+        db.execute(
+            "DELETE FROM session_exercises WHERE session_id = ?",
+            (session_id,),
+        )
+        for exercise_id, position, reps_list in rows:
+            se_cur = db.execute(
+                """
+                INSERT INTO session_exercises (session_id, exercise_id, position)
+                VALUES (?, ?, ?)
+                """,
+                (session_id, exercise_id, position),
+            )
+            session_exercise_id = se_cur.lastrowid
+            for set_number, reps in enumerate(reps_list, start=1):
+                db.execute(
+                    """
+                    INSERT INTO exercise_sets (session_exercise_id, set_number, reps)
+                    VALUES (?, ?, ?)
+                    """,
+                    (session_exercise_id, set_number, reps),
+                )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+
+def get_session_detail_for_edit(session_id: int) -> list:
+    """Return exercises with their set reps grouped, for pre-filling the edit form."""
+    rows = get_db().execute(
+        """
+        SELECT se.exercise_id, e.name AS exercise_name,
+               se.position, es.reps
+        FROM session_exercises se
+        JOIN exercises e ON e.id = se.exercise_id
+        JOIN exercise_sets es ON es.session_exercise_id = se.id
+        WHERE se.session_id = ?
+        ORDER BY se.position ASC, es.set_number ASC
+        """,
+        (session_id,),
+    ).fetchall()
+    # group into [{exercise_id, name, sets:[reps,...]}]
+    grouped = []
+    for row in rows:
+        if not grouped or grouped[-1]["exercise_id"] != row["exercise_id"]:
+            grouped.append({"exercise_id": row["exercise_id"], "name": row["exercise_name"], "sets": []})
+        grouped[-1]["sets"].append(row["reps"])
+    return grouped
+

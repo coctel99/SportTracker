@@ -21,7 +21,7 @@ def get_dashboard_stats(user_id: int) -> dict:
         (user_id, week_start),
     ).fetchone()["count"]
 
-    recent_sessions = db.execute(
+    recent_sessions_rows = db.execute(
         """
         SELECT id, session_date
         FROM sessions
@@ -31,6 +31,23 @@ def get_dashboard_stats(user_id: int) -> dict:
         """,
         (user_id,),
     ).fetchall()
+
+    # For each recent session, fetch exercises ordered by total reps desc
+    recent_sessions = []
+    for s in recent_sessions_rows:
+        exercises = db.execute(
+            """
+            SELECT e.name, COALESCE(SUM(es.reps), 0) AS total_reps
+            FROM session_exercises se
+            JOIN exercises e ON e.id = se.exercise_id
+            JOIN exercise_sets es ON es.session_exercise_id = se.id
+            WHERE se.session_id = ?
+            GROUP BY e.id, e.name
+            ORDER BY total_reps DESC
+            """,
+            (s["id"],),
+        ).fetchall()
+        recent_sessions.append({"id": s["id"], "session_date": s["session_date"], "exercises": exercises})
 
     total_reps_today = db.execute(
         """
