@@ -1,6 +1,6 @@
 """Tests for exercise CRUD."""
 
-from tests.conftest import get_csrf_token, login, register
+from tests.conftest import get_csrf_token, register
 
 
 def register_and_login(client):

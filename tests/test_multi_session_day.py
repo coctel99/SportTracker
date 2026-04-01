@@ -1,6 +1,6 @@
 """Tests for multi-session day behaviour."""
 
-from tests.conftest import get_csrf_token, login, register
+from tests.conftest import get_csrf_token, register
 
 
 def _setup(client, db):

@@ -2,7 +2,7 @@
 
 import json
 
-from tests.conftest import get_csrf_token, login, register
+from tests.conftest import get_csrf_token, register
 
 
 def register_login_add_exercise(client, db):

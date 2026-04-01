@@ -3,7 +3,7 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from tests.conftest import get_csrf_token, login, register
+from tests.conftest import get_csrf_token, register
 
 FROZEN_DATE = "2026-01-01"
 FROZEN_DATE_OBJ = date(2026, 1, 1)
