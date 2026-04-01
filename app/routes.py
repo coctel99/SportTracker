@@ -106,6 +106,7 @@ def register():
                 )
                 user = authenticate_user(email, password)
                 session.clear()
+                session.permanent = True
                 session["user_id"] = user["id"]
                 session["csrf_token"] = secrets.token_urlsafe(32)
                 return redirect(url_for("routes.dashboard"))
@@ -135,6 +136,7 @@ def login():
             flash("Invalid credentials.", "error")
         else:
             session.clear()
+            session.permanent = True
             session["user_id"] = user["id"]
             session["csrf_token"] = secrets.token_urlsafe(32)
             return redirect(url_for("routes.dashboard"))

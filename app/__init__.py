@@ -1,6 +1,7 @@
 """Application factory and environment-based Flask configuration."""
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from flask import Flask
@@ -30,6 +31,8 @@ def create_app(test_config=None):
         DEBUG=debug_mode,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=not debug_mode,
+        PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     )
 
     if test_config is not None:
