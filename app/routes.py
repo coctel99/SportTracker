@@ -14,6 +14,7 @@ from flask import (
     flash,
     g,
     jsonify,
+    make_response,
     redirect,
     render_template,
     request,
@@ -38,6 +39,7 @@ from app.tracker.exercises.queries import (
     list_exercises,
     update_exercise,
 )
+from app.tracker.export import export_csv, export_json
 from app.tracker.progress.queries import (
     get_chart_data,
     get_exercise_for_user,
@@ -553,3 +555,22 @@ def delete_account():
     session.clear()
     flash("Your account has been permanently deleted.", "success")
     return redirect(url_for("auth.register"))
+
+
+@bp.route("/profile/export/<fmt>")
+@login_required
+def export_data(fmt):
+    if fmt not in ("csv", "json"):
+        abort(404)
+
+    filename = f"sport_tracker_export_{date.today().isoformat()}.{fmt}"
+
+    if fmt == "csv":
+        response = make_response(export_csv(g.user["id"]))
+        response.headers["Content-Type"] = "text/csv"
+    else:
+        response = make_response(export_json(g.user["id"]))
+        response.headers["Content-Type"] = "application/json"
+
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
