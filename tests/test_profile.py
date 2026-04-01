@@ -204,3 +204,59 @@ def test_old_password_rejected_after_change(client):
     response = login(client, password="secret12")
 
     assert b"Invalid credentials" in response.data
+
+
+def post_delete_account(client, password):
+    csrf = get_csrf_token(client, "/profile")
+    return client.post(
+        "/profile/delete",
+        data={"csrf_token": csrf, "confirm_delete_password": password},
+        follow_redirects=True,
+    )
+
+
+def test_delete_account_success(client, db):
+    register_and_login(client)
+
+    response = post_delete_account(client, "secret12")
+
+    assert b"permanently deleted" in response.data
+    row = db.execute("SELECT * FROM users").fetchone()
+    assert row is None
+
+
+def test_delete_account_wrong_password(client, db):
+    register_and_login(client)
+
+    response = post_delete_account(client, "wrongpassword")
+
+    assert b"Incorrect password" in response.data
+    row = db.execute("SELECT * FROM users").fetchone()
+    assert row is not None
+
+
+def test_delete_account_removes_all_data(client, db):
+    register_and_login(client)
+    # Create an exercise and session first
+    csrf = get_csrf_token(client, "/exercises")
+    client.post(
+        "/exercises", data={"name": "Squat", "csrf_token": csrf}, follow_redirects=True
+    )
+    ex_id = db.execute("SELECT id FROM exercises").fetchone()["id"]
+    csrf = get_csrf_token(client, "/sessions/new")
+    client.post(
+        "/sessions/new",
+        data={
+            "session_date": "2026-01-01",
+            "exercise_id[]": [str(ex_id)],
+            "reps[]": ["10,10"],
+            "csrf_token": csrf,
+        },
+        follow_redirects=True,
+    )
+
+    post_delete_account(client, "secret12")
+
+    assert db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM exercises").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 0

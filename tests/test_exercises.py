@@ -5,7 +5,6 @@ from tests.conftest import get_csrf_token, login, register
 
 def register_and_login(client):
     register(client)
-    login(client)
 
 
 def _add_exercise(client, name="Squats", default_sets="", default_reps=""):

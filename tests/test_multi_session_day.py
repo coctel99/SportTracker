@@ -6,7 +6,6 @@ from tests.conftest import get_csrf_token, login, register
 def _setup(client, db):
     """Register, login, create two exercises, return (ex1_id, ex2_id)."""
     register(client)
-    login(client)
     client.post(
         "/exercises",
         data={"name": "Squat", "csrf_token": get_csrf_token(client, "/exercises")},
@@ -50,7 +49,6 @@ def test_training_day_single_session_redirects_to_detail(client, db):
 def test_training_day_no_session_redirects_to_new(client, db):
     """With no sessions on the day, /training-day/<date> redirects to new_session."""
     register(client)
-    login(client)
 
     response = client.get("/training-day/2026-03-31")
 

@@ -58,6 +58,8 @@ def test_register_rejects_invalid_email(client):
 
 def test_duplicate_register_shows_error(client):
     register(client)
+    csrf = get_csrf_token(client, "/dashboard")
+    client.post("/logout", data={"csrf_token": csrf})
     response = register(client)
     assert b"already exists" in response.data
 

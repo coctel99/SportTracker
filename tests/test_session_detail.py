@@ -19,7 +19,6 @@ def _patch_today():
 def register_login_add_session(client, db):
     """Register, login, add an exercise, log a session; return session id."""
     register(client)
-    login(client)
     client.post(
         "/exercises",
         data={"name": "Deadlift", "csrf_token": get_csrf_token(client, "/exercises")},

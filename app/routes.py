@@ -65,6 +65,9 @@ bp = Blueprint("routes", __name__)
 
 @auth_bp.route("/register", methods=("GET", "POST"))
 def register():
+    if g.user is not None:
+        return redirect(url_for("routes.dashboard"))
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
@@ -127,6 +130,9 @@ def register():
 
 @auth_bp.route("/login", methods=("GET", "POST"))
 def login():
+    if g.user is not None:
+        return redirect(url_for("routes.dashboard"))
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
@@ -524,3 +530,26 @@ def change_password_view():
 
     flash("Password changed successfully.", "success")
     return redirect(url_for("routes.profile"))
+
+
+@bp.route("/profile/delete", methods=("POST",))
+@login_required
+def delete_account():
+    from werkzeug.security import check_password_hash
+
+    from app.db import get_db
+
+    password = request.form.get("confirm_delete_password", "")
+    user = g.user
+
+    if not check_password_hash(user["password_hash"], password):
+        flash("Incorrect password. Account was not deleted.", "error")
+        return redirect(url_for("routes.profile"))
+
+    db = get_db()
+    db.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+    db.commit()
+
+    session.clear()
+    flash("Your account has been permanently deleted.", "success")
+    return redirect(url_for("auth.register"))

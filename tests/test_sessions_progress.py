@@ -7,7 +7,6 @@ from tests.conftest import get_csrf_token, login, register
 
 def register_login_add_exercise(client, db):
     register(client)
-    login(client)
     client.post(
         "/exercises",
         data={"name": "Bench", "csrf_token": get_csrf_token(client, "/exercises")},
