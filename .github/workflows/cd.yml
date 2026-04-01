@@ -21,6 +21,7 @@ jobs:
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ vars.SSH_PORT || '22' }}
+          envs: SPORT_TRACKER_HTTPS
           script: |
             set -e
             cd ${{ vars.APP_DIR }}
@@ -28,8 +29,10 @@ jobs:
             # Pull latest source code
             git pull origin main
 
-            # Rebuild image and restart (--build forces rebuild on code changes)
-            docker compose up -d --build --remove-orphans
+            # Rebuild image and restart, passing HTTPS flag from GitHub Actions variable
+            SPORT_TRACKER_HTTPS=$SPORT_TRACKER_HTTPS docker compose up -d --build --remove-orphans
 
             # Remove dangling images to save disk space
             docker image prune -f
+        env:
+          SPORT_TRACKER_HTTPS: ${{ vars.SPORT_TRACKER_HTTPS || 'false' }}

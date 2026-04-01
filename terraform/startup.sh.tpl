@@ -24,6 +24,7 @@ cat > ${app_dir}/.env <<ENVFILE
 SPORT_TRACKER_SECRET_KEY=${secret_key}
 SPORT_TRACKER_DEBUG=false
 SPORT_TRACKER_DATABASE=/app/instance/sport_tracker.sqlite
+SPORT_TRACKER_HTTPS=false
 ENVFILE
 chown ${ssh_user}:${ssh_user} ${app_dir}/.env
 

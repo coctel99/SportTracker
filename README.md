@@ -67,6 +67,7 @@ Infrastructure is managed with Terraform (GCP) and deployed via three GitHub Act
 | `TF_VAR_GITHUB_REPO` | GitHub repo HTTPS URL cloned onto the VM on first boot |
 | `TF_VAR_SSH_PUBLIC_KEY` | Personal public SSH key for direct VM access |
 | `TF_VAR_DEPLOY_PUBLIC_KEY` | Public SSH key pair for `SSH_PRIVATE_KEY`, injected into the VM for CD |
+| `SPORT_TRACKER_HTTPS` | Set to `true` once SSL is configured; enables `SESSION_COOKIE_SECURE` (defaults to `false`) |
 
 ### Workflows
 
@@ -83,6 +84,7 @@ Infrastructure is managed with Terraform (GCP) and deployed via three GitHub Act
 - `SPORT_TRACKER_PORT` (default: `5000`)
 - `SPORT_TRACKER_SECRET_KEY` (default: `dev` for local only)
 - `SPORT_TRACKER_DATABASE` (default: `instance/sport_tracker.sqlite`)
+- `SPORT_TRACKER_HTTPS` (`true`/`false`, default: `false`) — set to `true` only when the app is served over HTTPS; enables `SESSION_COOKIE_SECURE`
 
-When `SPORT_TRACKER_DEBUG=false`, `SPORT_TRACKER_SECRET_KEY` must be set to a non-default value and `SESSION_COOKIE_SECURE` is automatically enabled.
+When `SPORT_TRACKER_DEBUG=false`, `SPORT_TRACKER_SECRET_KEY` must be set to a non-default value.
 

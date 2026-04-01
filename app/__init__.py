@@ -25,13 +25,14 @@ def create_app(test_config=None):
     )
     default_database = str(Path(app.instance_path) / "sport_tracker.sqlite")
     debug_mode = _env_bool("SPORT_TRACKER_DEBUG", True)
+    https_enabled = _env_bool("SPORT_TRACKER_HTTPS", False)
     app.config.from_mapping(
         SECRET_KEY=os.getenv("SPORT_TRACKER_SECRET_KEY", "dev"),
         DATABASE=os.getenv("SPORT_TRACKER_DATABASE", default_database),
         DEBUG=debug_mode,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=not debug_mode,
+        SESSION_COOKIE_SECURE=https_enabled,
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     )
 
