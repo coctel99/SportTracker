@@ -76,9 +76,60 @@ def get_dashboard_stats(
     else:
         next_year, next_month = cal_year, cal_month + 1
 
+    # Fetch all distinct session dates for the user, ordered descending
+    all_session_dates = db.execute(
+        """
+        SELECT DISTINCT session_date
+        FROM sessions
+        WHERE user_id = ?
+        ORDER BY session_date DESC
+        """,
+        (user_id,),
+    ).fetchall()
+
+    # Calculate current streak and longest streak
+    current_streak = 0
+    longest_streak = 0
+
+    if all_session_dates:
+        dates = [date.fromisoformat(r["session_date"]) for r in all_session_dates]
+
+        # Current streak: count consecutive days ending on today or yesterday
+        streak = 0
+        expected = today
+        # Allow streak to include today even if no session yet today
+        if dates[0] < today - timedelta(days=1):
+            current_streak = 0
+        else:
+            for d in dates:
+                if d == expected or (streak == 0 and d == today - timedelta(days=1)):
+                    if streak == 0:
+                        expected = d
+                    if d == expected:
+                        streak += 1
+                        expected = expected - timedelta(days=1)
+                    else:
+                        break
+                else:
+                    break
+            current_streak = streak
+
+        # Longest streak: scan all dates
+        streak = 1
+        best = 1
+        for i in range(1, len(dates)):
+            if dates[i - 1] - dates[i] == timedelta(days=1):
+                streak += 1
+                best = max(best, streak)
+            else:
+                streak = 1
+        longest_streak = best
+
     return {
         "sessions_this_week": sessions_this_week,
         "total_reps_today": total_reps_today,
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
         "cal_year": cal_year,
         "cal_month": cal_month,
         "cal_month_name": date(cal_year, cal_month, 1).strftime("%B %Y"),
