@@ -34,16 +34,16 @@ def _log_session(client, date, exercise_id, reps):
     )
 
 
-def test_training_day_single_session_redirects_to_detail(client, db):
-    """With one session on the day, /training-day/<date> redirects to session detail."""
+def test_training_day_single_session_shows_page(client, db):
+    """With one session on the day, /training-day/<date> renders the training_day page."""
     ex1, _ = _setup(client, db)
     _log_session(client, "2026-03-31", ex1, "5,5,5")
     session_id = db.execute("SELECT id FROM sessions").fetchone()["id"]
 
     response = client.get("/training-day/2026-03-31")
 
-    assert response.status_code == 302
-    assert f"/sessions/{session_id}" in response.headers["Location"]
+    assert response.status_code == 200
+    assert f"/sessions/{session_id}".encode() in response.data
 
 
 def test_training_day_no_session_redirects_to_new(client, db):
@@ -137,3 +137,33 @@ def test_dashboard_calendar_shows_badge_for_multiple_sessions(client, db):
     # The badge showing "2" and the training-day link should both be present
     assert b"/training-day/2026-03-31" in response.data
     assert b"2 sessions" in response.data
+
+
+def test_reps_only_session_with_browser_duration_payload(client, db):
+    """Regression: the browser always submits comma-filled duration[] slots and a
+    blank duration_unit[]. A reps-only session must save successfully without
+    raising 'Please select a duration unit'."""
+    ex1, _ = _setup(client, db)
+    csrf = get_csrf_token(client, "/sessions/new")
+
+    # Mimic exactly what the JS submit handler sends for 3 sets, no duration entered:
+    #   reps[]        = "5,5,5"
+    #   duration[]    = ",,"      (three blank slots joined by commas)
+    #   duration_unit[]= ""       (blank — "unit" option selected)
+    response = client.post(
+        "/sessions/new",
+        data={
+            "session_date": "2026-04-07",
+            "exercise_id[]": [str(ex1)],
+            "reps[]": ["5,5,5"],
+            "duration[]": [",,"],
+            "duration_unit[]": [""],
+            "csrf_token": csrf,
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"An error occurred" not in response.data
+    assert b"duration unit" not in response.data
+    assert db.execute("SELECT COUNT(*) AS c FROM sessions").fetchone()["c"] == 1

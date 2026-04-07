@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   name TEXT NOT NULL,
   default_sets INTEGER,
   default_reps INTEGER,
+  default_duration_seconds INTEGER CHECK (default_duration_seconds > 0),
+  default_duration_unit TEXT CHECK (default_duration_unit IN ('seconds', 'minutes', 'hours')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, name),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -51,7 +53,8 @@ CREATE TABLE IF NOT EXISTS exercise_sets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_exercise_id INTEGER NOT NULL,
   set_number INTEGER NOT NULL,
-  reps INTEGER NOT NULL CHECK (reps >= 0),
+  reps INTEGER CHECK (reps >= 0),
+  duration_seconds INTEGER CHECK (duration_seconds > 0),
   FOREIGN KEY (session_exercise_id) REFERENCES session_exercises(id) ON DELETE CASCADE
 );
 """
@@ -81,10 +84,13 @@ def init_db():
 
 
 def migrate_db():
-    """Add any missing columns to existing tables (idempotent)."""
+    """Add any missing columns to existing tables and fix constraints (idempotent)."""
     conn = get_db()
-    existing = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
-    migrations = [
+
+    existing_users = {
+        row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()
+    }
+    user_migrations = [
         ("name", "ALTER TABLE users ADD COLUMN name TEXT"),
         ("date_of_birth", "ALTER TABLE users ADD COLUMN date_of_birth TEXT"),
         (
@@ -93,9 +99,66 @@ def migrate_db():
         ),
         ("weight", "ALTER TABLE users ADD COLUMN weight REAL"),
     ]
-    for col, sql in migrations:
-        if col not in existing:
+    for col, sql in user_migrations:
+        if col not in existing_users:
             conn.execute(sql)
+
+    existing_exercises = {
+        row[1] for row in conn.execute("PRAGMA table_info(exercises)").fetchall()
+    }
+    exercises_migrations = [
+        (
+            "default_duration_seconds",
+            "ALTER TABLE exercises ADD COLUMN default_duration_seconds INTEGER CHECK (default_duration_seconds > 0)",
+        ),
+        (
+            "default_duration_unit",
+            "ALTER TABLE exercises ADD COLUMN default_duration_unit TEXT CHECK (default_duration_unit IN ('seconds', 'minutes', 'hours'))",
+        ),
+    ]
+    for col, sql in exercises_migrations:
+        if col not in existing_exercises:
+            conn.execute(sql)
+
+    sets_cols = {
+        row[1]: row
+        for row in conn.execute("PRAGMA table_info(exercise_sets)").fetchall()
+    }
+
+    if "duration_seconds" not in sets_cols:
+        conn.execute(
+            "ALTER TABLE exercise_sets ADD COLUMN duration_seconds INTEGER CHECK (duration_seconds > 0)"
+        )
+        sets_cols = {
+            row[1]: row
+            for row in conn.execute("PRAGMA table_info(exercise_sets)").fetchall()
+        }
+
+    reps_col = sets_cols.get("reps")
+    if reps_col and reps_col[3] == 1:  # notnull == 1
+        conn.executescript("""
+            PRAGMA foreign_keys = OFF;
+
+            CREATE TABLE exercise_sets_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              session_exercise_id INTEGER NOT NULL,
+              set_number INTEGER NOT NULL,
+              reps INTEGER CHECK (reps >= 0),
+              duration_seconds INTEGER CHECK (duration_seconds > 0),
+              FOREIGN KEY (session_exercise_id) REFERENCES session_exercises(id) ON DELETE CASCADE
+            );
+
+            INSERT INTO exercise_sets_new (id, session_exercise_id, set_number, reps, duration_seconds)
+            SELECT id, session_exercise_id, set_number, reps,
+                   CASE WHEN typeof(duration_seconds) != 'null' THEN duration_seconds ELSE NULL END
+            FROM exercise_sets;
+
+            DROP TABLE exercise_sets;
+            ALTER TABLE exercise_sets_new RENAME TO exercise_sets;
+
+            PRAGMA foreign_keys = ON;
+        """)
+
     conn.commit()
 
 
@@ -106,3 +169,9 @@ def init_app(app):
     def init_db_command():
         init_db()
         print("Database initialized.")
+
+    @app.cli.command("migrate-db")
+    def migrate_db_command():
+        """Apply any pending schema migrations to an existing database."""
+        migrate_db()
+        print("Database migrated.")

@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Edit Session {{ session['session_date'] }} – Sport Tracker{% endblock %}
 {% block content %}
-
 <div class="mb-6 flex items-center gap-3">
   <a href="{{ url_for('routes.session_detail', session_id=session['id']) }}"
      class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition">
@@ -14,13 +13,10 @@
     <p class="text-sm text-gray-500 mt-0.5">{{ session['session_date'] }}</p>
   </div>
 </div>
-
 <form method="post" id="session-form" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
   <!-- ── Step 1: Date + Exercise picker ──────────────────────────────── -->
   <div id="step-1">
-
     <!-- Date -->
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
       <label for="session-date" class="block text-sm font-medium text-gray-700 mb-1">Session date</label>
@@ -50,7 +46,6 @@
         </div>
       </div>
     </div>
-
     <!-- Exercise picker -->
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
       <div class="flex items-center justify-between mb-4">
@@ -76,7 +71,6 @@
           </a>
         </div>
       </div>
-
       <div id="no-exercise-msg"
            class="hidden mb-3 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -84,13 +78,11 @@
         </svg>
         Select at least one exercise before continuing.
       </div>
-
       <!-- pre-selected exercise ids for JS -->
       <div id="preselected-data"
            data-ids="{{ existing | map(attribute='exercise_id') | list | tojson }}"
            data-sets="{{ existing | map(attribute='sets') | list | tojson }}"
            class="hidden"></div>
-
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {% for e in exercises %}
           <button type="button"
@@ -100,7 +92,9 @@
                   data-exercise-id="{{ e['id'] }}"
                   data-exercise-name="{{ e['name'] }}"
                   data-default-sets="{{ e['default_sets'] or '' }}"
-                  data-default-reps="{{ e['default_reps'] or '' }}">
+                  data-default-reps="{{ e['default_reps'] or '' }}"
+                  data-default-dur="{{ e['default_duration_seconds'] or '' }}"
+                  data-default-dur-unit="{{ e['default_duration_unit'] or '' }}">
             <span class="card-check absolute top-2 right-2 hidden h-5 w-5 items-center
                          justify-center rounded-full bg-indigo-600 text-white">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
@@ -108,14 +102,18 @@
               </svg>
             </span>
             <p class="pr-6 text-sm font-semibold text-gray-900 leading-snug">{{ e['name'] }}</p>
-            {% if e['default_sets'] or e['default_reps'] %}
-              <p class="text-xs text-gray-400">{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}</p>
+            {% if e['default_sets'] or e['default_reps'] or e['default_duration_seconds'] %}
+              <p class="text-xs text-gray-400">
+                {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
+                {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
+                  {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
+                {% endif %}
+              </p>
             {% endif %}
           </button>
         {% endfor %}
       </div>
     </div>
-
     <div class="flex items-center gap-3">
       <button type="button" id="btn-continue"
               class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
@@ -132,8 +130,7 @@
       </a>
     </div>
   </div>
-
-  <!-- ── Step 2: Sets & reps entry ───────────────────────────────────── -->
+  <!-- ── Step 2: Sets & reps / time entry ────────────────────────────── -->
   <div id="step-2" class="hidden">
     <button type="button" id="btn-back"
             class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition mb-5">
@@ -142,25 +139,22 @@
       </svg>
       Back to exercise selection
     </button>
-
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
       <h2 class="text-base font-semibold text-gray-900 mb-1">
         <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">2</span>
-        Enter sets &amp; reps
+        Enter sets &amp; reps / time
       </h2>
-      <p class="text-xs text-gray-400 mb-5 ml-8">Update the sets and reps for each exercise</p>
+      <p class="text-xs text-gray-400 mb-5 ml-8">Update the sets, reps, and/or duration for each exercise</p>
       <div id="sets-panels" class="space-y-5"></div>
     </div>
-
     <div id="hidden-fields" aria-hidden="true"></div>
-
     <div class="flex flex-col gap-3">
       <div id="no-reps-msg"
            class="hidden flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
         </svg>
-        Please fill in the reps for every set before saving.
+        Each set needs at least reps or a duration filled in. If you enter a duration, select a unit too.
       </div>
       <div class="flex items-center gap-3">
         <button type="submit"
@@ -179,18 +173,13 @@
       </div>
     </div>
   </div>
-
 </form>
-
 {% endblock %}
-
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const form       = document.getElementById('session-form');
   if (!form) return;
-
-  // ── Date stepper ─────────────────────────────────────────────────────────
   const dateInput = document.getElementById('session-date');
   function stepDate(days) {
     const current = dateInput.value ? new Date(dateInput.value + 'T00:00:00') : new Date();
@@ -202,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.getElementById('date-up').addEventListener('click', e => { e.preventDefault(); stepDate(+1); });
   document.getElementById('date-down').addEventListener('click', e => { e.preventDefault(); stepDate(-1); });
-
   const step1      = document.getElementById('step-1');
   const step2      = document.getElementById('step-2');
   const btnCont    = document.getElementById('btn-continue');
@@ -212,18 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const countBadge = document.getElementById('selected-count');
   const setPanels  = document.getElementById('sets-panels');
   const hiddenFlds = document.getElementById('hidden-fields');
-
-  // ── Pre-fill selection from existing session data ─────────────────────
-  const preData    = document.getElementById('preselected-data');
-  const preIds     = JSON.parse(preData.dataset.ids);   // [exercise_id, ...]
-  const preSets    = JSON.parse(preData.dataset.sets);  // [[reps,...], ...]
-
+  const preData = document.getElementById('preselected-data');
+  const preIds  = JSON.parse(preData.dataset.ids);
+  // preSets: list of per-exercise lists of [reps, duration_seconds] tuples
+  const preSets = JSON.parse(preData.dataset.sets);
   const cards = form.querySelectorAll('.exercise-card');
-
-  function selectedCards() {
-    return [...cards].filter(c => c.classList.contains('active'));
-  }
-
+  function selectedCards() { return [...cards].filter(c => c.classList.contains('active')); }
   function updateBadge() {
     const n = selectedCards().length;
     countBadge.textContent = n === 0 ? '0 selected' : n + ' selected';
@@ -231,28 +213,20 @@ document.addEventListener('DOMContentLoaded', () => {
       ? 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 transition-all'
       : 'inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 transition-all';
   }
-
   function activateCard(card) {
     card.classList.add('active', 'border-indigo-600', 'bg-indigo-50');
     card.classList.remove('border-gray-200');
     const check = card.querySelector('.card-check');
-    check.classList.remove('hidden');
-    check.classList.add('flex');
+    check.classList.remove('hidden'); check.classList.add('flex');
   }
-
   function deactivateCard(card) {
     card.classList.remove('active', 'border-indigo-600', 'bg-indigo-50');
     card.classList.add('border-gray-200');
     const check = card.querySelector('.card-check');
-    check.classList.add('hidden');
-    check.classList.remove('flex');
+    check.classList.add('hidden'); check.classList.remove('flex');
   }
-
-  // pre-select cards that were in the session
   cards.forEach(card => {
-    if (preIds.includes(parseInt(card.dataset.exerciseId, 10))) {
-      activateCard(card);
-    }
+    if (preIds.includes(parseInt(card.dataset.exerciseId, 10))) activateCard(card);
     card.addEventListener('click', () => {
       card.classList.contains('active') ? deactivateCard(card) : activateCard(card);
       noExMsg.classList.add('hidden');
@@ -260,8 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   updateBadge();
-
-  // ── Step 1 → Step 2 ─────────────────────────────────────────────────────
   btnCont.addEventListener('click', () => {
     const sel = selectedCards();
     if (sel.length === 0) {
@@ -274,17 +246,23 @@ document.addEventListener('DOMContentLoaded', () => {
     step2.classList.remove('hidden');
     step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-
   btnBack.addEventListener('click', () => {
     step2.classList.add('hidden');
     step1.classList.remove('hidden');
   });
 
-  // ── Build Step-2 panels ──────────────────────────────────────────────────
+  function syncUnitStyle(sel) {
+    if (sel.value === '') {
+      sel.classList.add('text-gray-400');
+      sel.classList.remove('text-gray-800');
+    } else {
+      sel.classList.remove('text-gray-400');
+      sel.classList.add('text-gray-800');
+    }
+  }
   function buildStep2(sel) {
     setPanels.innerHTML  = '';
     hiddenFlds.innerHTML = '';
-
     sel.forEach((card, idx) => {
       const exId        = parseInt(card.dataset.exerciseId, 10);
       const exName      = card.dataset.exerciseName;
@@ -292,11 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const prefillSets = preIdx !== -1 ? preSets[preIdx] : null;
       const defaultSets = prefillSets ? prefillSets.length : (parseInt(card.dataset.defaultSets, 10) || 1);
       const defaultReps = parseInt(card.dataset.defaultReps, 10) || '';
-
+      const defaultDur     = card.dataset.defaultDur     || '';
+      const defaultDurUnit = card.dataset.defaultDurUnit || '';
+      // For prefilled sets, determine the unit from existing data (stored as raw seconds)
+      // so we default to 'seconds' when there's saved duration data, otherwise use card default
+      const prefillHasDur = prefillSets && prefillSets.some(s => s[1] !== null && s[1] !== undefined);
+      const initUnit = prefillHasDur ? 'seconds' : defaultDurUnit;
       const panel = document.createElement('div');
       panel.className = 'rounded-xl border border-gray-200 bg-gray-50 p-4';
       panel.dataset.idx = idx;
-
       panel.innerHTML = `
         <div class="flex items-center mb-3">
           <span class="flex items-center gap-2 text-sm font-semibold text-gray-900">
@@ -304,113 +286,123 @@ document.addEventListener('DOMContentLoaded', () => {
             ${exName}
           </span>
         </div>
-        <div class="flex items-center gap-3 mb-4">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
           <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sets</label>
           <div class="inline-flex items-center rounded-lg border border-gray-300 bg-white overflow-hidden">
-            <button type="button" class="btn-dec w-8 h-9 flex items-center justify-center text-gray-500
-                                         hover:bg-gray-100 transition border-r border-gray-300">−</button>
-            <input type="number" class="sets-input w-10 h-9 text-center text-sm font-semibold text-gray-900
-                                        border-none outline-none bg-transparent [appearance:textfield]
-                                        [&::-webkit-outer-spin-button]:appearance-none
-                                        [&::-webkit-inner-spin-button]:appearance-none"
+            <button type="button" class="btn-dec w-8 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition border-r border-gray-300">−</button>
+            <input type="number" class="sets-input w-10 h-9 text-center text-sm font-semibold text-gray-900 border-none outline-none bg-transparent"
                    value="${defaultSets}" min="1" max="20">
-            <button type="button" class="btn-inc w-8 h-9 flex items-center justify-center text-gray-500
-                                         hover:bg-gray-100 transition border-l border-gray-300">+</button>
+            <button type="button" class="btn-inc w-8 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition border-l border-gray-300">+</button>
           </div>
+          <label class="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">Duration unit</label>
+          <select class="dur-unit rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-800
+                         focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <option value="" ${!initUnit ? 'selected' : ''}>unit</option>
+            <option value="seconds" ${initUnit === 'seconds' ? 'selected' : ''}>seconds</option>
+            <option value="minutes" ${initUnit === 'minutes' ? 'selected' : ''}>minutes</option>
+            <option value="hours"   ${initUnit === 'hours'   ? 'selected' : ''}>hours</option>
+          </select>
         </div>
-        <div class="reps-rows space-y-2 max-w-xs"></div>
+        <div class="set-rows space-y-2"></div>
       `;
-
       setPanels.appendChild(panel);
-
       const setsInput = panel.querySelector('.sets-input');
-      const repsRows  = panel.querySelector('.reps-rows');
+      const durUnit   = panel.querySelector('.dur-unit');
+      const setRows   = panel.querySelector('.set-rows');
       let prevCount   = 0;
-
-      function renderReps(focusLast = false) {
+      function renderRows(focusLast = false) {
         const count = Math.max(1, Math.min(20, parseInt(setsInput.value, 10) || 1));
         setsInput.value = count;
-        const existing = [...repsRows.querySelectorAll('.rep-input')].map(i => i.value);
-        repsRows.innerHTML = '';
-
+        const existingReps = [...setRows.querySelectorAll('.rep-input')].map(i => i.value);
+        const existingDur  = [...setRows.querySelectorAll('.dur-input')].map(i => i.value);
+        setRows.innerHTML  = '';
         for (let s = 0; s < count; s++) {
-          // use prefill values from existing session, then existing input values, then defaults
-          let initVal = existing[s] !== undefined && existing[s] !== ''
-            ? existing[s]
-            : (prefillSets && prefillSets[s] !== undefined ? prefillSets[s] : (defaultReps !== '' ? defaultReps : ''));
+          let initReps = existingReps[s] !== undefined && existingReps[s] !== ''
+            ? existingReps[s]
+            : (prefillSets && prefillSets[s] !== undefined && prefillSets[s][0] !== null
+               ? prefillSets[s][0] : (defaultReps !== '' ? defaultReps : ''));
+          let initDur = existingDur[s] !== undefined && existingDur[s] !== ''
+            ? existingDur[s]
+            : (prefillSets && prefillSets[s] !== undefined && prefillSets[s][1] !== null
+               ? prefillSets[s][1]
+               : (s === 0 ? defaultDur : ''));
           const row = document.createElement('div');
-          row.className = 'flex items-center gap-3';
+          row.className = 'grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2';
           row.innerHTML = `
-            <span class="w-14 text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
-            <input type="number"
-                   class="rep-input w-24 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                          font-medium text-gray-900 text-center
-                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                   placeholder="reps" min="0" value="${initVal}">
+            <span class="text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
+            <input type="number" class="rep-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-900 text-center focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" placeholder="reps" min="0" value="${initReps}">
+            <input type="number" class="dur-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-900 text-center focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" placeholder="time" min="0" step="any" value="${initDur}">
           `;
-          repsRows.appendChild(row);
+          setRows.appendChild(row);
         }
-
         if (focusLast) {
-          const all = repsRows.querySelectorAll('.rep-input');
+          const all = setRows.querySelectorAll('.rep-input');
           const last = all[all.length - 1];
           if (last) requestAnimationFrame(() => requestAnimationFrame(() => last.focus()));
         } else if (idx === 0 && prevCount === 0) {
-          const first = repsRows.querySelector('.rep-input');
+          const first = setRows.querySelector('.rep-input');
           if (first) requestAnimationFrame(() => requestAnimationFrame(() => first.focus()));
         }
         prevCount = count;
       }
-
-      renderReps();
-
-      panel.querySelector('.btn-dec').addEventListener('click', () => {
-        setsInput.value = Math.max(1, parseInt(setsInput.value, 10) - 1);
-        renderReps(false);
-      });
-      panel.querySelector('.btn-inc').addEventListener('click', e => {
-        e.currentTarget.blur();
-        setsInput.value = Math.min(20, parseInt(setsInput.value, 10) + 1);
-        renderReps(true);
-      });
-      setsInput.addEventListener('change', () => renderReps(false));
-
+      renderRows();
+      panel.querySelector('.btn-dec').addEventListener('click', () => { setsInput.value = Math.max(1, parseInt(setsInput.value, 10) - 1); renderRows(false); });
+      panel.querySelector('.btn-inc').addEventListener('click', e => { e.currentTarget.blur(); setsInput.value = Math.min(20, parseInt(setsInput.value, 10) + 1); renderRows(true); });
+      setsInput.addEventListener('change', () => renderRows(false));
       const hId  = document.createElement('input');
-      hId.type   = 'hidden'; hId.name = 'exercise_id[]'; hId.value = exId;
+      hId.type = 'hidden'; hId.name = 'exercise_id[]'; hId.value = exId;
       hiddenFlds.appendChild(hId);
-
       const hReps = document.createElement('input');
-      hReps.type  = 'hidden'; hReps.name = 'reps[]';
-      hReps.dataset.panelIdx = idx;
+      hReps.type = 'hidden'; hReps.name = 'reps[]'; hReps.dataset.panelIdx = idx;
       hiddenFlds.appendChild(hReps);
+      const hDur = document.createElement('input');
+      hDur.type = 'hidden'; hDur.name = 'duration[]'; hDur.dataset.panelDurIdx = idx;
+      hiddenFlds.appendChild(hDur);
+      const hUnit = document.createElement('input');
+      hUnit.type = 'hidden'; hUnit.name = 'duration_unit[]'; hUnit.dataset.panelUnitIdx = idx; hUnit.value = durUnit.value;
+      hiddenFlds.appendChild(hUnit);
+      syncUnitStyle(durUnit);
+      durUnit.addEventListener('change', () => { hUnit.value = durUnit.value; syncUnitStyle(durUnit); });
     });
   }
-
-  // ── Submit ───────────────────────────────────────────────────────────────
   form.addEventListener('submit', e => {
     const panels = [...setPanels.querySelectorAll('[data-idx]')];
     if (panels.length === 0) { e.preventDefault(); return; }
-
     let firstError = null;
     panels.forEach((panel, idx) => {
       const repInputs = [...panel.querySelectorAll('.rep-input')];
-      const vals = [];
-      repInputs.forEach(inp => {
-        const v = inp.value.trim();
-        if (v === '' || isNaN(parseInt(v, 10)) || parseInt(v, 10) < 0) {
+      const durInputs = [...panel.querySelectorAll('.dur-input')];
+      const durUnit   = panel.querySelector('.dur-unit');
+      const repsVals = [], durVals = [];
+      repInputs.forEach((inp, s) => {
+        const rVal = inp.value.trim(), dInp = durInputs[s], dVal = dInp ? dInp.value.trim() : '';
+        const hasReps = rVal !== '' && !isNaN(parseInt(rVal, 10)) && parseInt(rVal, 10) >= 0;
+        const hasDur  = dVal !== '' && !isNaN(parseFloat(dVal)) && parseFloat(dVal) > 0;
+        if (hasDur && durUnit && !durUnit.value) {
+          durUnit.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+          durUnit.addEventListener('change', () => durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (!firstError) firstError = durUnit;
+        } else if (durUnit) {
+          durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
+        }
+        if (!hasReps && !hasDur) {
           inp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
-          inp.addEventListener('input', () =>
-            inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (dInp) dInp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+          inp.addEventListener('input', () => inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (dInp) dInp.addEventListener('input', () => dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
           if (!firstError) firstError = inp;
         } else {
           inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
-          vals.push(parseInt(v, 10));
+          if (dInp) dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
         }
+        repsVals.push(hasReps ? parseInt(rVal, 10) : '');
+        durVals.push(hasDur  ? parseFloat(dVal)    : '');
       });
       const hReps = hiddenFlds.querySelector(`[data-panel-idx="${idx}"]`);
-      if (hReps) hReps.value = vals.join(',');
+      if (hReps) hReps.value = repsVals.join(',');
+      const hDur = hiddenFlds.querySelector(`[data-panel-dur-idx="${idx}"]`);
+      if (hDur) hDur.value = durVals.join(',');
     });
-
     if (firstError) {
       e.preventDefault();
       noRepsMsg.classList.remove('hidden');
@@ -423,4 +415,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endblock %}
-

@@ -110,7 +110,9 @@
                     data-exercise-id="{{ e['id'] }}"
                     data-exercise-name="{{ e['name'] }}"
                     data-default-sets="{{ e['default_sets'] or '' }}"
-                    data-default-reps="{{ e['default_reps'] or '' }}">
+                    data-default-reps="{{ e['default_reps'] or '' }}"
+                    data-default-dur="{{ e['default_duration_seconds'] or '' }}"
+                    data-default-dur-unit="{{ e['default_duration_unit'] or '' }}">
 
               <!-- Checkmark badge -->
               <span class="card-check absolute top-2 right-2 hidden h-5 w-5 items-center
@@ -121,9 +123,12 @@
               </span>
 
               <p class="pr-6 text-sm font-semibold text-gray-900 leading-snug">{{ e['name'] }}</p>
-              {% if e['default_sets'] or e['default_reps'] %}
+              {% if e['default_sets'] or e['default_reps'] or e['default_duration_seconds'] %}
                 <p class="text-xs text-gray-400">
-                  {{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}
+                  {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
+                  {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
+                    {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
+                  {% endif %}
                 </p>
               {% endif %}
             </button>
@@ -165,9 +170,9 @@
       <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
         <h2 class="text-base font-semibold text-gray-900 mb-1">
           <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">2</span>
-          Enter sets &amp; reps
+          Enter sets &amp; reps / time
         </h2>
-        <p class="text-xs text-gray-400 mb-5 ml-8">For each exercise, set the number of sets and reps per set</p>
+        <p class="text-xs text-gray-400 mb-5 ml-8">For each exercise, set the number of sets and fill reps, duration, or both per set</p>
 
         <!-- Per-exercise entry panels – injected by JS -->
         <div id="sets-panels" class="space-y-5"></div>
@@ -184,7 +189,7 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
           </svg>
-          Please fill in the reps for every set before saving.
+          Each set needs at least reps or a duration filled in. If you enter a duration, select a unit too.
         </div>
         <div class="flex items-center gap-3">
         <button type="submit"
@@ -274,36 +279,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── Step 1 → Step 2 ─────────────────────────────────────────────────────
-  btnCont.addEventListener('click', () => {
-    const sel = selectedCards();
-    if (sel.length === 0) {
-      noExMsg.classList.remove('hidden');
-      noExMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    buildStep2(sel);
-    step1.classList.add('hidden');
-    step2.classList.remove('hidden');
-    step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
   // ── Step 2 → Step 1 ─────────────────────────────────────────────────────
   btnBack.addEventListener('click', () => {
     step2.classList.add('hidden');
     step1.classList.remove('hidden');
   });
 
+  function syncUnitStyle(sel) {
+    if (sel.value === '') {
+      sel.classList.add('text-gray-400');
+      sel.classList.remove('text-gray-800');
+    } else {
+      sel.classList.remove('text-gray-400');
+      sel.classList.add('text-gray-800');
+    }
+  }
+
   // ── Build Step-2 panels ──────────────────────────────────────────────────
-  function buildStep2(sel) {
+  function buildStep2(sel, prefillData) {
     setPanels.innerHTML  = '';
     hiddenFlds.innerHTML = '';
 
     sel.forEach((card, idx) => {
-      const exId          = card.dataset.exerciseId;
-      const exName        = card.dataset.exerciseName;
-      const defaultSets   = parseInt(card.dataset.defaultSets, 10) || 1;
-      const defaultReps   = parseInt(card.dataset.defaultReps, 10) || '';
+      const exId        = card.dataset.exerciseId;
+      const exName      = card.dataset.exerciseName;
+      const defaultSets = parseInt(card.dataset.defaultSets, 10) || 1;
+      const defaultReps = parseInt(card.dataset.defaultReps, 10) || '';
+      const defaultDur  = card.dataset.defaultDur  || '';
+      const defaultDurUnit = card.dataset.defaultDurUnit || '';
 
       // ── panel ────────────────────────────────────────────────────────────
       const panel = document.createElement('div');
@@ -318,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </span>
         </div>
 
-        <div class="flex items-center gap-3 mb-4">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
           <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sets</label>
           <div class="flex items-center gap-1">
             <button type="button" class="btn-dec w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
@@ -330,69 +333,85 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" class="btn-inc w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
                                          hover:bg-gray-100 transition text-lg leading-none flex items-center justify-center">+</button>
           </div>
+          <label class="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">Duration unit</label>
+          <select class="dur-unit rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-800
+                         focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <option value="" ${!defaultDurUnit ? 'selected' : ''}>unit</option>
+            <option value="seconds" ${defaultDurUnit === 'seconds' ? 'selected' : ''}>seconds</option>
+            <option value="minutes" ${defaultDurUnit === 'minutes' ? 'selected' : ''}>minutes</option>
+            <option value="hours"   ${defaultDurUnit === 'hours'   ? 'selected' : ''}>hours</option>
+          </select>
         </div>
 
-        <div class="reps-rows space-y-2 max-w-xs"></div>
+        <div class="set-rows space-y-2"></div>
       `;
 
       setPanels.appendChild(panel);
 
       const setsInput = panel.querySelector('.sets-input');
-      const repsRows  = panel.querySelector('.reps-rows');
+      const durUnit   = panel.querySelector('.dur-unit');
+      const setRows   = panel.querySelector('.set-rows');
+      let prevCount   = 0;
 
-      let prevCount = 0;
-
-      // render reps inputs for current set count
-      function renderReps(focusLast = false) {
+      function renderRows(focusLast = false) {
         const count = Math.max(1, Math.min(20, parseInt(setsInput.value, 10) || 1));
         setsInput.value = count;
 
-        // preserve existing values
-        const existing = [...repsRows.querySelectorAll('.rep-input')].map(i => i.value);
-        repsRows.innerHTML = '';
+        const existingReps = [...setRows.querySelectorAll('.rep-input')].map(i => i.value);
+        const existingDur  = [...setRows.querySelectorAll('.dur-input')].map(i => i.value);
+        setRows.innerHTML  = '';
 
         for (let s = 0; s < count; s++) {
+          let initReps = existingReps[s] !== undefined ? existingReps[s]
+            : (defaultReps !== '' ? defaultReps : '');
+          let initDur  = existingDur[s]  !== undefined ? existingDur[s]
+            : (s === 0 ? defaultDur : '');
+
           const row = document.createElement('div');
-          row.className = 'flex items-center gap-3';
+          row.className = 'grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2';
           row.innerHTML = `
-            <span class="w-14 text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
+            <span class="text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
             <input type="number"
-                   class="rep-input w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
+                   class="rep-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm
                           font-medium text-gray-900 text-center
                           focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
                    placeholder="reps" min="0"
-                   value="${existing[s] !== undefined ? existing[s] : (defaultReps !== '' ? defaultReps : '')}">
+                   value="${initReps}">
+            <input type="number"
+                   class="dur-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm
+                          font-medium text-gray-900 text-center
+                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+                   placeholder="time" min="0" step="any"
+                   value="${initDur}">
           `;
-          repsRows.appendChild(row);
+          setRows.appendChild(row);
         }
 
-        // focus the last row when a set was just added, or the first input of the first exercise on initial build
         if (focusLast) {
-          const allInputs = repsRows.querySelectorAll('.rep-input');
+          const allInputs = setRows.querySelectorAll('.rep-input');
           const lastInput = allInputs[allInputs.length - 1];
           if (lastInput) requestAnimationFrame(() => requestAnimationFrame(() => lastInput.focus()));
         } else if (idx === 0 && prevCount === 0) {
-          const firstInput = repsRows.querySelector('.rep-input');
+          const firstInput = setRows.querySelector('.rep-input');
           if (firstInput) requestAnimationFrame(() => requestAnimationFrame(() => firstInput.focus()));
         }
-
         prevCount = count;
       }
 
-      renderReps();
+      renderRows();
 
       panel.querySelector('.btn-dec').addEventListener('click', () => {
         setsInput.value = Math.max(1, parseInt(setsInput.value, 10) - 1);
-        renderReps(false);
+        renderRows(false);
       });
       panel.querySelector('.btn-inc').addEventListener('click', (e) => {
         e.currentTarget.blur();
         setsInput.value = Math.min(20, parseInt(setsInput.value, 10) + 1);
-        renderReps(true);
+        renderRows(true);
       });
-      setsInput.addEventListener('change', () => renderReps(false));
+      setsInput.addEventListener('change', () => renderRows(false));
 
-      // hidden fields (exercise_id[] and reps[]) added per exercise
+      // hidden fields: exercise_id[], reps[], duration[], duration_unit[]
       const hId   = document.createElement('input');
       hId.type    = 'hidden';
       hId.name    = 'exercise_id[]';
@@ -404,10 +423,44 @@ document.addEventListener('DOMContentLoaded', () => {
       hReps.name   = 'reps[]';
       hReps.dataset.panelIdx = idx;
       hiddenFlds.appendChild(hReps);
+
+      const hDur  = document.createElement('input');
+      hDur.type   = 'hidden';
+      hDur.name   = 'duration[]';
+      hDur.dataset.panelDurIdx = idx;
+      hiddenFlds.appendChild(hDur);
+
+      const hUnit  = document.createElement('input');
+      hUnit.type   = 'hidden';
+      hUnit.name   = 'duration_unit[]';
+      hUnit.dataset.panelUnitIdx = idx;
+      hUnit.value  = durUnit.value;  // already pre-selected to defaultDurUnit or ''
+      hiddenFlds.appendChild(hUnit);
+
+      // keep hidden unit in sync with select, and update text colour
+      syncUnitStyle(durUnit);
+      durUnit.addEventListener('change', () => {
+        hUnit.value = durUnit.value;
+        syncUnitStyle(durUnit);
+      });
     });
   }
 
-  // ── Submit: collect reps, validate, populate hidden fields ──────────────
+  // ── Step 1 → Step 2 ─────────────────────────────────────────────────────
+  btnCont.addEventListener('click', () => {
+    const sel = selectedCards();
+    if (sel.length === 0) {
+      noExMsg.classList.remove('hidden');
+      noExMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    buildStep2(sel, null);
+    step1.classList.add('hidden');
+    step2.classList.remove('hidden');
+    step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ── Submit: collect reps + duration, validate, populate hidden fields ────
   const noRepsMsg = document.getElementById('no-reps-msg');
 
   form.addEventListener('submit', e => {
@@ -421,22 +474,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     panels.forEach((panel, idx) => {
       const repInputs = [...panel.querySelectorAll('.rep-input')];
-      const vals = [];
-      repInputs.forEach(inp => {
-        const v = inp.value.trim();
-        if (v === '' || isNaN(parseInt(v, 10)) || parseInt(v, 10) < 0) {
+      const durInputs = [...panel.querySelectorAll('.dur-input')];
+      const durUnit   = panel.querySelector('.dur-unit');
+      const repsVals  = [];
+      const durVals   = [];
+      let   rowError  = false;
+
+      repInputs.forEach((inp, s) => {
+        const rVal = inp.value.trim();
+        const dInp = durInputs[s];
+        const dVal = dInp ? dInp.value.trim() : '';
+        const hasReps = rVal !== '' && !isNaN(parseInt(rVal, 10)) && parseInt(rVal, 10) >= 0;
+        const hasDur  = dVal !== '' && !isNaN(parseFloat(dVal)) && parseFloat(dVal) > 0;
+
+        // If duration value entered but no unit selected, flag the unit select
+        if (hasDur && durUnit && !durUnit.value) {
+          durUnit.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+          durUnit.addEventListener('change', () => durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (!firstError) firstError = durUnit;
+        } else if (durUnit) {
+          durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
+        }
+
+        if (!hasReps && !hasDur) {
           inp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
-          inp.addEventListener('input', () =>
-            inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (dInp) dInp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
+          inp.addEventListener('input', () => inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
+          if (dInp) dInp.addEventListener('input', () => dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
           if (!firstError) firstError = inp;
+          rowError = true;
         } else {
           inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
-          vals.push(parseInt(v, 10));
+          if (dInp) dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
         }
+
+        repsVals.push(hasReps ? parseInt(rVal, 10) : '');
+        durVals.push(hasDur  ? parseFloat(dVal)    : '');
       });
 
       const hReps = hiddenFlds.querySelector(`[data-panel-idx="${idx}"]`);
-      if (hReps) hReps.value = vals.join(',');
+      if (hReps) hReps.value = repsVals.join(',');
+
+      const hDur = hiddenFlds.querySelector(`[data-panel-dur-idx="${idx}"]`);
+      if (hDur) hDur.value = durVals.join(',');
     });
 
     if (firstError) {

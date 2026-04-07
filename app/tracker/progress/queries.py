@@ -4,19 +4,20 @@ from app.db import get_db
 
 
 def get_progress_summary(user_id: int):
-    """Return all exercises with their cumulative rep counts for *user_id*."""
+    """Return all exercises with their cumulative rep and duration totals for *user_id*."""
     return (
         get_db()
         .execute(
             """
         SELECT e.id, e.name,
-               COALESCE(SUM(es.reps), 0) AS total_reps
+               COALESCE(SUM(es.reps), 0) AS total_reps,
+               COALESCE(SUM(es.duration_seconds), 0) AS total_seconds
         FROM exercises e
         LEFT JOIN session_exercises se ON se.exercise_id = e.id
         LEFT JOIN exercise_sets es ON es.session_exercise_id = se.id
         WHERE e.user_id = ?
         GROUP BY e.id, e.name
-        ORDER BY e.name ASC
+        ORDER BY total_reps DESC, e.name ASC
         """,
             (user_id,),
         )
@@ -46,7 +47,7 @@ def get_chart_data(exercise_id: int, user_id: int) -> dict:
         .execute(
             """
         SELECT s.session_date,
-               COUNT(es.id)              AS sets_count,
+               COUNT(es.id) AS sets_count,
                COALESCE(SUM(es.reps), 0) AS reps_total
         FROM sessions s
         JOIN session_exercises se ON se.session_id = s.id
@@ -67,7 +68,7 @@ def get_chart_data(exercise_id: int, user_id: int) -> dict:
     }
 
 
-def get_top_exercises_chart_data(user_id: int, limit: int = 10) -> dict:
+def get_top_exercises_chart_data(user_id: int, limit: int = 5) -> dict:
     """Return a multi-series dataset for the top *limit* exercises by total reps.
 
     Returns a dict with:
@@ -82,7 +83,7 @@ def get_top_exercises_chart_data(user_id: int, limit: int = 10) -> dict:
         SELECT e.id, e.name, COALESCE(SUM(es.reps), 0) AS total_reps
         FROM exercises e
         LEFT JOIN session_exercises se ON se.exercise_id = e.id
-        LEFT JOIN exercise_sets es     ON es.session_exercise_id = se.id
+        LEFT JOIN exercise_sets es ON es.session_exercise_id = se.id
         WHERE e.user_id = ?
         GROUP BY e.id, e.name
         ORDER BY total_reps DESC
@@ -105,7 +106,7 @@ def get_top_exercises_chart_data(user_id: int, limit: int = 10) -> dict:
                COALESCE(SUM(es.reps), 0) AS reps_total
         FROM sessions s
         JOIN session_exercises se ON se.session_id = s.id
-        JOIN exercise_sets es     ON es.session_exercise_id = se.id
+        JOIN exercise_sets es ON es.session_exercise_id = se.id
         WHERE s.user_id = ? AND se.exercise_id IN ({placeholders})
         GROUP BY se.exercise_id, s.session_date
         ORDER BY s.session_date ASC

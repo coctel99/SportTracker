@@ -8,7 +8,9 @@ def get_exercises_for_user(user_id: int):
     return (
         get_db()
         .execute(
-            "SELECT id, name, default_sets, default_reps FROM exercises WHERE user_id = ? ORDER BY name",
+            """SELECT id, name, default_sets, default_reps,
+                      default_duration_seconds, default_duration_unit
+               FROM exercises WHERE user_id = ? ORDER BY name""",
             (user_id,),
         )
         .fetchall()
@@ -18,8 +20,9 @@ def get_exercises_for_user(user_id: int):
 def save_session(user_id: int, session_date: str, rows: list[tuple]) -> int:
     """Persist a complete training session atomically.
 
-    *rows* is a list of ``(exercise_id, position, reps_list)`` tuples where
-    ``reps_list`` is a list of non-negative integers (one per set).
+    *rows* is a list of ``(exercise_id, position, sets_data)`` tuples where
+    ``sets_data`` is a list of ``(reps, duration_seconds)`` tuples
+    (either value may be None, but not both).
 
     Returns the new session id.
 
@@ -33,7 +36,7 @@ def save_session(user_id: int, session_date: str, rows: list[tuple]) -> int:
         )
         session_id = cur.lastrowid
 
-        for exercise_id, position, reps_list in rows:
+        for exercise_id, position, sets_data in rows:
             se_cur = db.execute(
                 """
                 INSERT INTO session_exercises (session_id, exercise_id, position)
@@ -43,13 +46,13 @@ def save_session(user_id: int, session_date: str, rows: list[tuple]) -> int:
             )
             session_exercise_id = se_cur.lastrowid
 
-            for set_number, reps in enumerate(reps_list, start=1):
+            for set_number, (reps, duration_seconds) in enumerate(sets_data, start=1):
                 db.execute(
                     """
-                    INSERT INTO exercise_sets (session_exercise_id, set_number, reps)
-                    VALUES (?, ?, ?)
+                    INSERT INTO exercise_sets (session_exercise_id, set_number, reps, duration_seconds)
+                    VALUES (?, ?, ?, ?)
                     """,
-                    (session_exercise_id, set_number, reps),
+                    (session_exercise_id, set_number, reps, duration_seconds),
                 )
 
         db.commit()
@@ -74,7 +77,7 @@ def get_session_for_user(session_id: int, user_id: int):
 def get_session_detail(session_id: int) -> list:
     """Return a list of exercises with their sets for a session.
 
-    Each row has: exercise_name, set_number, reps.
+    Each row has: exercise_name, set_number, reps, duration_seconds.
     Results are ordered by position then set_number.
     """
     return (
@@ -84,7 +87,8 @@ def get_session_detail(session_id: int) -> list:
         SELECT e.name AS exercise_name,
                se.position,
                es.set_number,
-               es.reps
+               es.reps,
+               es.duration_seconds
         FROM session_exercises se
         JOIN exercises e ON e.id = se.exercise_id
         JOIN exercise_sets es ON es.session_exercise_id = se.id
@@ -125,7 +129,7 @@ def update_session(
             "DELETE FROM session_exercises WHERE session_id = ?",
             (session_id,),
         )
-        for exercise_id, position, reps_list in rows:
+        for exercise_id, position, sets_data in rows:
             se_cur = db.execute(
                 """
                 INSERT INTO session_exercises (session_id, exercise_id, position)
@@ -134,13 +138,13 @@ def update_session(
                 (session_id, exercise_id, position),
             )
             session_exercise_id = se_cur.lastrowid
-            for set_number, reps in enumerate(reps_list, start=1):
+            for set_number, (reps, duration_seconds) in enumerate(sets_data, start=1):
                 db.execute(
                     """
-                    INSERT INTO exercise_sets (session_exercise_id, set_number, reps)
-                    VALUES (?, ?, ?)
+                    INSERT INTO exercise_sets (session_exercise_id, set_number, reps, duration_seconds)
+                    VALUES (?, ?, ?, ?)
                     """,
-                    (session_exercise_id, set_number, reps),
+                    (session_exercise_id, set_number, reps, duration_seconds),
                 )
         db.commit()
     except Exception:
@@ -149,13 +153,13 @@ def update_session(
 
 
 def get_session_detail_for_edit(session_id: int) -> list:
-    """Return exercises with their set reps grouped, for pre-filling the edit form."""
+    """Return exercises with their set data grouped, for pre-filling the edit form."""
     rows = (
         get_db()
         .execute(
             """
         SELECT se.exercise_id, e.name AS exercise_name,
-               se.position, es.reps
+               se.position, es.reps, es.duration_seconds
         FROM session_exercises se
         JOIN exercises e ON e.id = se.exercise_id
         JOIN exercise_sets es ON es.session_exercise_id = se.id
@@ -166,7 +170,7 @@ def get_session_detail_for_edit(session_id: int) -> list:
         )
         .fetchall()
     )
-    # group into [{exercise_id, name, sets:[reps,...]}]
+    # group into [{exercise_id, name, sets:[(reps, duration_seconds),...]}]
     grouped = []
     for row in rows:
         if not grouped or grouped[-1]["exercise_id"] != row["exercise_id"]:
@@ -177,7 +181,7 @@ def get_session_detail_for_edit(session_id: int) -> list:
                     "sets": [],
                 }
             )
-        grouped[-1]["sets"].append(row["reps"])
+        grouped[-1]["sets"].append((row["reps"], row["duration_seconds"]))
     return grouped
 
 
