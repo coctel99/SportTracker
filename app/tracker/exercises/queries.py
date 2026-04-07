@@ -20,6 +20,8 @@ def create_exercise(
     name: str,
     default_sets: int | None,
     default_reps: int | None,
+    default_duration_seconds: int | None = None,
+    default_duration_unit: str | None = None,
 ) -> None:
     """Insert a new exercise row and commit.
 
@@ -30,10 +32,18 @@ def create_exercise(
     db = get_db()
     db.execute(
         """
-        INSERT INTO exercises (user_id, name, default_sets, default_reps)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO exercises (user_id, name, default_sets, default_reps,
+                               default_duration_seconds, default_duration_unit)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (user_id, name, default_sets, default_reps),
+        (
+            user_id,
+            name,
+            default_sets,
+            default_reps,
+            default_duration_seconds,
+            default_duration_unit,
+        ),
     )
     db.commit()
 
@@ -54,6 +64,8 @@ def update_exercise(
     name: str,
     default_sets: int | None,
     default_reps: int | None,
+    default_duration_seconds: int | None = None,
+    default_duration_unit: str | None = None,
 ) -> None:
     """Update an existing exercise owned by *user_id* and commit.
 
@@ -64,10 +76,19 @@ def update_exercise(
     db.execute(
         """
         UPDATE exercises
-        SET name = ?, default_sets = ?, default_reps = ?
+        SET name = ?, default_sets = ?, default_reps = ?,
+            default_duration_seconds = ?, default_duration_unit = ?
         WHERE id = ? AND user_id = ?
         """,
-        (name, default_sets, default_reps, exercise_id, user_id),
+        (
+            name,
+            default_sets,
+            default_reps,
+            default_duration_seconds,
+            default_duration_unit,
+            exercise_id,
+            user_id,
+        ),
     )
     db.commit()
 

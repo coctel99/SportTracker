@@ -48,8 +48,8 @@ from app.tracker.progress.queries import (
 )
 from app.tracker.sessions.forms import (
     parse_optional_int,
-    parse_reps_list,
     parse_session_date,
+    parse_sets_data,
 )
 from app.tracker.sessions.queries import (
     delete_session,
@@ -186,14 +186,34 @@ def exercises():
         name = request.form.get("name", "").strip()
         raw_sets = request.form.get("default_sets", "").strip()
         raw_reps = request.form.get("default_reps", "").strip()
+        raw_dur = request.form.get("default_duration", "").strip()
+        raw_dur_unit = request.form.get("default_duration_unit", "").strip()
 
         if not name:
             flash("Exercise name is required.", "error")
         else:
             try:
+                from app.tracker.sessions.forms import parse_duration
+
                 default_sets = parse_optional_int(raw_sets, "Default sets", minimum=1)
                 default_reps = parse_optional_int(raw_reps, "Default reps", minimum=0)
-                create_exercise(user_id, name, default_sets, default_reps)
+                default_duration_seconds = None
+                default_duration_unit = None
+                if raw_dur:
+                    if raw_dur_unit not in ("seconds", "minutes", "hours"):
+                        raise ValueError(
+                            "Please select a duration unit (seconds, minutes, or hours)."
+                        )
+                    default_duration_seconds = parse_duration(raw_dur, raw_dur_unit)
+                    default_duration_unit = raw_dur_unit
+                create_exercise(
+                    user_id,
+                    name,
+                    default_sets,
+                    default_reps,
+                    default_duration_seconds,
+                    default_duration_unit,
+                )
                 return redirect(url_for("routes.exercises"))
             except ValueError as exc:
                 flash(str(exc), "error")
@@ -223,14 +243,35 @@ def edit_exercise_view(exercise_id):
         name = request.form.get("name", "").strip()
         raw_sets = request.form.get("default_sets", "").strip()
         raw_reps = request.form.get("default_reps", "").strip()
+        raw_dur = request.form.get("default_duration", "").strip()
+        raw_dur_unit = request.form.get("default_duration_unit", "").strip()
 
         if not name:
             flash("Exercise name is required.", "error")
         else:
             try:
+                from app.tracker.sessions.forms import parse_duration
+
                 default_sets = parse_optional_int(raw_sets, "Default sets", minimum=1)
                 default_reps = parse_optional_int(raw_reps, "Default reps", minimum=0)
-                update_exercise(exercise_id, user_id, name, default_sets, default_reps)
+                default_duration_seconds = None
+                default_duration_unit = None
+                if raw_dur:
+                    if raw_dur_unit not in ("seconds", "minutes", "hours"):
+                        raise ValueError(
+                            "Please select a duration unit (seconds, minutes, or hours)."
+                        )
+                    default_duration_seconds = parse_duration(raw_dur, raw_dur_unit)
+                    default_duration_unit = raw_dur_unit
+                update_exercise(
+                    exercise_id,
+                    user_id,
+                    name,
+                    default_sets,
+                    default_reps,
+                    default_duration_seconds,
+                    default_duration_unit,
+                )
                 flash("Exercise updated.", "success")
                 return redirect(url_for("routes.exercises"))
             except ValueError as exc:
@@ -262,6 +303,8 @@ def new_session():
 
         exercise_ids = request.form.getlist("exercise_id[]")
         reps_raw = request.form.getlist("reps[]")
+        duration_raw = request.form.getlist("duration[]")
+        duration_unit_raw = request.form.getlist("duration_unit[]")
         allowed_ids = {row["id"] for row in exercises_list}
         rows = []
 
@@ -272,8 +315,12 @@ def new_session():
         for idx, raw_id in enumerate(exercise_ids):
             raw_id = raw_id.strip()
             raw_reps = reps_raw[idx] if idx < len(reps_raw) else ""
+            raw_dur = duration_raw[idx] if idx < len(duration_raw) else ""
+            raw_unit = (
+                duration_unit_raw[idx] if idx < len(duration_unit_raw) else "seconds"
+            )
 
-            if not raw_id and not raw_reps.strip():
+            if not raw_id and not raw_reps.strip() and not raw_dur.strip():
                 continue
 
             if not raw_id:
@@ -291,12 +338,12 @@ def new_session():
                 return _render()
 
             try:
-                reps_list = parse_reps_list(raw_reps)
+                sets_data = parse_sets_data(raw_reps, raw_dur, raw_unit)
             except ValueError as exc:
                 flash(str(exc), "error")
                 return _render()
 
-            rows.append((exercise_id, idx, reps_list))
+            rows.append((exercise_id, idx, sets_data))
 
         if not rows:
             flash("Add at least one complete exercise row.", "error")
@@ -322,12 +369,12 @@ def session_detail(session_id):
     if sess is None:
         abort(404)
     rows = get_session_detail(session_id)
-    # Group flat rows into a list of {name, sets: [reps, ...]} dicts
+    # Group flat rows into a list of {name, sets: [(reps, duration_seconds), ...]} dicts
     exercises = []
     for row in rows:
         if not exercises or exercises[-1]["name"] != row["exercise_name"]:
             exercises.append({"name": row["exercise_name"], "sets": []})
-        exercises[-1]["sets"].append(row["reps"])
+        exercises[-1]["sets"].append((row["reps"], row["duration_seconds"]))
     return render_template("session_detail.html", session=sess, exercises=exercises)
 
 
@@ -336,14 +383,12 @@ def session_detail(session_id):
 def training_day(session_date):
     """Show all sessions for a given day.
 
-    If there is exactly one session redirect straight to session_detail.
     If there are none, redirect to new_session with the date pre-filled.
+    Otherwise always render the training_day page so the user can add more sessions.
     """
     sessions = get_sessions_for_day(g.user["id"], session_date)
     if len(sessions) == 0:
         return redirect(url_for("routes.new_session", date=session_date))
-    if len(sessions) == 1:
-        return redirect(url_for("routes.session_detail", session_id=sessions[0]["id"]))
     return render_template(
         "training_day.html", session_date=session_date, sessions=sessions
     )
@@ -388,6 +433,8 @@ def edit_session_view(session_id):
 
         exercise_ids = request.form.getlist("exercise_id[]")
         reps_raw = request.form.getlist("reps[]")
+        duration_raw = request.form.getlist("duration[]")
+        duration_unit_raw = request.form.getlist("duration_unit[]")
         allowed_ids = {row["id"] for row in exercises_list}
         rows = []
 
@@ -398,7 +445,11 @@ def edit_session_view(session_id):
         for idx, raw_id in enumerate(exercise_ids):
             raw_id = raw_id.strip()
             raw_reps = reps_raw[idx] if idx < len(reps_raw) else ""
-            if not raw_id and not raw_reps.strip():
+            raw_dur = duration_raw[idx] if idx < len(duration_raw) else ""
+            raw_unit = (
+                duration_unit_raw[idx] if idx < len(duration_unit_raw) else "seconds"
+            )
+            if not raw_id and not raw_reps.strip() and not raw_dur.strip():
                 continue
             if not raw_id:
                 flash("Each row must include an exercise.", "error")
@@ -412,11 +463,11 @@ def edit_session_view(session_id):
                 flash("Please choose a valid exercise.", "error")
                 return _render()
             try:
-                reps_list = parse_reps_list(raw_reps)
+                sets_data = parse_sets_data(raw_reps, raw_dur, raw_unit)
             except ValueError as exc:
                 flash(str(exc), "error")
                 return _render()
-            rows.append((exercise_id, idx, reps_list))
+            rows.append((exercise_id, idx, sets_data))
 
         if not rows:
             flash("Add at least one complete exercise row.", "error")
