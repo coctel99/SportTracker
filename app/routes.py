@@ -357,7 +357,7 @@ def new_session():
             )
             return _render()
 
-        return redirect(url_for("routes.dashboard"))
+        return redirect(url_for("routes.training_day", session_date=session_date))
 
     return _render()
 
@@ -365,16 +365,21 @@ def new_session():
 @bp.route("/sessions/<int:session_id>")
 @login_required
 def session_detail(session_id):
+    """Show the detail page for a single session."""
     sess = get_session_for_user(session_id, g.user["id"])
     if sess is None:
         abort(404)
     rows = get_session_detail(session_id)
-    # Group flat rows into a list of {name, sets: [(reps, duration_seconds), ...]} dicts
+    # Group rows by exercise name (preserving order)
     exercises = []
+    seen = {}
     for row in rows:
-        if not exercises or exercises[-1]["name"] != row["exercise_name"]:
-            exercises.append({"name": row["exercise_name"], "sets": []})
-        exercises[-1]["sets"].append((row["reps"], row["duration_seconds"]))
+        name = row["exercise_name"]
+        if name not in seen:
+            entry = {"name": name, "sets": []}
+            seen[name] = entry
+            exercises.append(entry)
+        seen[name]["sets"].append((row["reps"], row["duration_seconds"]))
     return render_template("session_detail.html", session=sess, exercises=exercises)
 
 
@@ -400,8 +405,13 @@ def delete_session_view(session_id):
     sess = get_session_for_user(session_id, g.user["id"])
     if sess is None:
         abort(404)
+    session_date = sess["session_date"]
     delete_session(session_id, g.user["id"])
     flash("Session deleted.", "success")
+    # If no sessions remain for that day, go to dashboard; otherwise stay on the day
+    remaining = get_sessions_for_day(g.user["id"], session_date)
+    if remaining:
+        return redirect(url_for("routes.training_day", session_date=session_date))
     return redirect(url_for("routes.dashboard"))
 
 
@@ -480,7 +490,7 @@ def edit_session_view(session_id):
             return _render()
 
         flash("Session updated.", "success")
-        return redirect(url_for("routes.session_detail", session_id=session_id))
+        return redirect(url_for("routes.training_day", session_date=session_date))
 
     return _render()
 

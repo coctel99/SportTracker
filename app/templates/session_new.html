@@ -14,9 +14,17 @@
 
 {% block content %}
 
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-gray-900">Log Session</h1>
-  <p class="text-sm text-gray-500 mt-0.5">Pick exercises, then enter your sets &amp; reps</p>
+<div class="mb-6 flex items-center gap-3">
+  <a href="{{ url_for('routes.dashboard') }}"
+     class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Log Session</h1>
+    <p class="text-sm text-gray-500 mt-0.5">Choose exercises, enter your sets &amp; reps</p>
+  </div>
 </div>
 
 {% if not exercises %}
@@ -41,194 +49,127 @@
 
 {% else %}
 
-  <form method="post" id="session-form" novalidate>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<form method="post" id="session-form" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <!-- ── Step 1: Date + Exercise picker ──────────────────────────────── -->
-    <div id="step-1">
-
-      <!-- Date -->
-      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
-        <label for="session-date" class="block text-sm font-medium text-gray-700 mb-1">Session date</label>
-        <div class="inline-flex items-center gap-2">
-          <input id="session-date" type="date" name="session_date"
-                 value="{{ request.form.get('session_date', today) }}"
-                 class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
-                        text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
-                        focus:ring-2 focus:ring-indigo-200 transition">
-          <div class="flex flex-col gap-0.5">
-            <button type="button" id="date-up"
-                    class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white
-                           text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95"
-                    aria-label="Next day">
-              <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>
-              </svg>
-            </button>
-            <button type="button" id="date-down"
-                    class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white
-                           text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95"
-                    aria-label="Previous day">
-              <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Exercise picker -->
-      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-base font-semibold text-gray-900">
-              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">1</span>
-              Choose exercises
-            </h2>
-            <p class="text-xs text-gray-400 mt-0.5 ml-8">Tap a card to add it to your session</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="selected-count"
-                  class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 transition-all">
-              0 selected
-            </span>
-            <a href="{{ url_for('routes.exercises') }}"
-               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
-                      text-xs font-semibold text-gray-600 hover:bg-gray-50 transition active:scale-95">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-              </svg>
-              New exercise
-            </a>
-          </div>
-        </div>
-
-        <!-- Validation message -->
-        <div id="no-exercise-msg"
-             class="hidden mb-3 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-          </svg>
-          Select at least one exercise before continuing.
-        </div>
-
-        <!-- Exercise cards grid -->
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" id="exercise-grid">
-          {% for e in exercises %}
-            <button type="button"
-                    class="exercise-card relative flex flex-col items-start gap-1 rounded-xl border-2
-                           border-gray-200 bg-white p-3.5 text-left transition-all duration-150
-                           hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    data-exercise-id="{{ e['id'] }}"
-                    data-exercise-name="{{ e['name'] }}"
-                    data-default-sets="{{ e['default_sets'] or '' }}"
-                    data-default-reps="{{ e['default_reps'] or '' }}"
-                    data-default-dur="{{ e['default_duration_seconds'] or '' }}"
-                    data-default-dur-unit="{{ e['default_duration_unit'] or '' }}">
-
-              <!-- Checkmark badge -->
-              <span class="card-check absolute top-2 right-2 hidden h-5 w-5 items-center
-                           justify-center rounded-full bg-indigo-600 text-white">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                </svg>
-              </span>
-
-              <p class="pr-6 text-sm font-semibold text-gray-900 leading-snug">{{ e['name'] }}</p>
-              {% if e['default_sets'] or e['default_reps'] or e['default_duration_seconds'] %}
-                <p class="text-xs text-gray-400">
-                  {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
-                  {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
-                    {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
-                  {% endif %}
-                </p>
-              {% endif %}
-            </button>
-          {% endfor %}
-        </div>
-      </div>
-
-      <!-- Continue button -->
-      <div class="flex items-center gap-3">
-        <button type="button" id="btn-continue"
-                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
-                       text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
-          Continue
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-          </svg>
+  <!-- ── Date ───────────────────────────────────────────────────────────── -->
+  <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
+    <label for="session-date" class="block text-sm font-medium text-gray-700 mb-1">Session date</label>
+    <div class="inline-flex items-center gap-2">
+      <input id="session-date" type="date" name="session_date"
+             value="{{ request.form.get('session_date', today) }}"
+             class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm
+                    focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+      <div class="flex flex-col gap-0.5">
+        <button type="button" id="date-up"
+                class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95" aria-label="Next day">
+          <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
         </button>
-        <a href="{{ url_for('routes.dashboard') }}"
-           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5
-                  text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
-          Cancel
-        </a>
+        <button type="button" id="date-down"
+                class="flex items-center justify-center w-6 h-5 rounded border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition active:scale-95" aria-label="Previous day">
+          <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </button>
       </div>
+    </div>
+  </div>
 
-    </div><!-- /step-1 -->
-
-    <!-- ── Step 2: Sets & reps entry ───────────────────────────────────── -->
-    <div id="step-2" class="hidden">
-
-      <!-- Back link -->
-      <button type="button" id="btn-back"
-              class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition mb-5">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+  <!-- ── Exercise picker (always open, at top) ────────────────────────── -->
+  <div class="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden mb-5">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <span class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+        <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
         </svg>
-        Back to exercise selection
-      </button>
-
-      <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
-        <h2 class="text-base font-semibold text-gray-900 mb-1">
-          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1.5">2</span>
-          Enter sets &amp; reps / time
-        </h2>
-        <p class="text-xs text-gray-400 mb-5 ml-8">For each exercise, set the number of sets and fill reps, duration, or both per set</p>
-
-        <!-- Per-exercise entry panels – injected by JS -->
-        <div id="sets-panels" class="space-y-5"></div>
+        Choose exercises
+        <span id="selected-count" class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 hidden"></span>
+      </span>
+      <a href="{{ url_for('routes.exercises') }}"
+         class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        New exercise
+      </a>
+    </div>
+    <div class="p-5">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {% for e in exercises %}
+          <button type="button"
+                  class="exercise-card relative flex flex-col items-start gap-1 rounded-xl border-2 border-gray-200 bg-white p-3.5 text-left transition-all duration-150 hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  data-exercise-id="{{ e['id'] }}"
+                  data-exercise-name="{{ e['name'] }}"
+                  data-default-sets="{{ e['default_sets'] or '' }}"
+                  data-default-reps="{{ e['default_reps'] or '' }}"
+                  data-default-dur="{{ e['default_duration_seconds'] or '' }}"
+                  data-default-dur-unit="{{ e['default_duration_unit'] or '' }}">
+            <span class="card-check absolute top-2 right-2 hidden h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+              </svg>
+            </span>
+            <p class="pr-6 text-sm font-semibold text-gray-900 leading-snug">{{ e['name'] }}</p>
+            {% if e['default_sets'] or e['default_reps'] or e['default_duration_seconds'] %}
+              <p class="text-xs text-gray-400">
+                {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
+                {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
+                  {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
+                {% endif %}
+              </p>
+            {% endif %}
+          </button>
+        {% endfor %}
       </div>
+      <p class="mt-3 text-xs text-gray-400">Tap a card to add or remove it. Changes apply immediately below.</p>
+    </div>
+  </div>
 
-      <!-- Hidden inputs submitted to server -->
-      <div id="hidden-fields" aria-hidden="true"></div>
+  <!-- ── Sets & reps entry ─────────────────────────────────────────────── -->
+  <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 mb-5">
+    <h2 class="text-base font-semibold text-gray-900 mb-1">Sets &amp; reps / time</h2>
+    <p class="text-xs text-gray-400 mb-5">Fill reps, duration, or both per set</p>
+    <div id="sets-panels" class="space-y-5"></div>
+    <div id="no-exercise-msg"
+         class="{% if not request.form %}{% else %}hidden {% endif %}flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+      </svg>
+      Select exercises above to get started.
+    </div>
+  </div>
 
-      <!-- Submit -->
-      <div class="flex flex-col gap-3">
-        <!-- Validation message -->
-        <div id="no-reps-msg"
-             class="hidden flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-          </svg>
-          Each set needs at least reps or a duration filled in. If you enter a duration, select a unit too.
-        </div>
-        <div class="flex items-center gap-3">
-        <button type="submit"
-                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold
-                       text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          Save session
-        </button>
-        <a href="{{ url_for('routes.dashboard') }}"
-           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5
-                  text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
-          Cancel
-        </a>
-        </div>
-      </div><!-- /submit -->
+  <!-- ── Hidden fields + submit ─────────────────────────────────────────── -->
+  <div id="hidden-fields" aria-hidden="true"></div>
 
-    </div><!-- /step-2 -->
+  <div class="flex flex-col gap-3">
+    <div id="no-reps-msg"
+         class="hidden flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+      </svg>
+      Each set needs at least reps or a duration filled in. If you enter a duration, select a unit too.
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Save session
+      </button>
+      <a href="{{ url_for('routes.dashboard') }}"
+         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95">
+        Cancel
+      </a>
+    </div>
+  </div>
 
-  </form>
-
+</form>
 {% endif %}
 
 {% endblock %}
 
 {% block scripts %}
+{% if exercises %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const form       = document.getElementById('session-form');
@@ -237,310 +178,249 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Date stepper ─────────────────────────────────────────────────────────
   const dateInput = document.getElementById('session-date');
   function stepDate(days) {
-    const current = dateInput.value ? new Date(dateInput.value + 'T00:00:00') : new Date();
-    current.setDate(current.getDate() + days);
-    const y = current.getFullYear();
-    const m = String(current.getMonth() + 1).padStart(2, '0');
-    const d = String(current.getDate()).padStart(2, '0');
-    dateInput.value = `${y}-${m}-${d}`;
+    const d = dateInput.value ? new Date(dateInput.value + 'T00:00:00') : new Date();
+    d.setDate(d.getDate() + days);
+    dateInput.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
-  document.getElementById('date-up').addEventListener('click', e => { e.preventDefault(); stepDate(+1); });
+  document.getElementById('date-up').addEventListener('click',   e => { e.preventDefault(); stepDate(+1); });
   document.getElementById('date-down').addEventListener('click', e => { e.preventDefault(); stepDate(-1); });
 
-  const step1      = document.getElementById('step-1');
-  const step2      = document.getElementById('step-2');
-  const btnCont    = document.getElementById('btn-continue');
-  const btnBack    = document.getElementById('btn-back');
-  const noExMsg    = document.getElementById('no-exercise-msg');
-  const countBadge = document.getElementById('selected-count');
+  // ── State ────────────────────────────────────────────────────────────────
   const setPanels  = document.getElementById('sets-panels');
   const hiddenFlds = document.getElementById('hidden-fields');
+  const noExMsg    = document.getElementById('no-exercise-msg');
+  const noRepsMsg  = document.getElementById('no-reps-msg');
+  const countBadge = document.getElementById('selected-count');
 
-  // ── Step 1: exercise card toggle ────────────────────────────────────────
-  const cards = form.querySelectorAll('.exercise-card');
+  let activeCards = []; // ordered
 
-  function selectedCards() {
-    return [...cards].filter(c => c.classList.contains('active'));
-  }
-
-  function updateBadge() {
-    const n = selectedCards().length;
-    countBadge.textContent = n === 0 ? '0 selected' : n + ' selected';
-    countBadge.className = n > 0
-      ? 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 transition-all'
-      : 'inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 transition-all';
-  }
-
-  cards.forEach(card => {
-    card.addEventListener('click', () => {
-      const active = card.classList.toggle('active');
-      const check  = card.querySelector('.card-check');
-      if (active) {
-        check.classList.remove('hidden');
-        check.classList.add('flex');
-        card.classList.add('border-indigo-600', 'bg-indigo-50');
-        card.classList.remove('border-gray-200');
-      } else {
-        check.classList.add('hidden');
-        check.classList.remove('flex');
-        card.classList.remove('border-indigo-600', 'bg-indigo-50');
-        card.classList.add('border-gray-200');
-      }
-      noExMsg.classList.add('hidden');
-      updateBadge();
-    });
-  });
-
-  // ── Step 2 → Step 1 ─────────────────────────────────────────────────────
-  btnBack.addEventListener('click', () => {
-    step2.classList.add('hidden');
-    step1.classList.remove('hidden');
-  });
-
-  function syncUnitStyle(sel) {
-    if (sel.value === '') {
-      sel.classList.add('text-gray-400');
-      sel.classList.remove('text-gray-800');
-    } else {
-      sel.classList.remove('text-gray-400');
-      sel.classList.add('text-gray-800');
-    }
-  }
-
-  // Convert raw seconds to a display value in the given unit string.
   function secsToUnit(seconds, unit) {
     if (seconds === '' || seconds === null || seconds === undefined) return '';
     if (unit === 'hours')   return Math.round(seconds / 3600 * 100) / 100;
     if (unit === 'minutes') return Math.round(seconds / 60   * 100) / 100;
-    return seconds; // seconds or no unit → keep raw
+    return seconds;
   }
 
-  // ── Build Step-2 panels ──────────────────────────────────────────────────
-  function buildStep2(sel, prefillData) {
-    setPanels.innerHTML  = '';
-    hiddenFlds.innerHTML = '';
+  // Pick the most readable unit for a raw seconds value
+  function pickUnit(seconds) {
+    if (!seconds) return 'seconds';
+    if (seconds >= 3600) return 'hours';
+    if (seconds >= 60)   return 'minutes';
+    return 'seconds';
+  }
 
-    sel.forEach((card, idx) => {
-      const exId        = card.dataset.exerciseId;
-      const exName      = card.dataset.exerciseName;
-      const defaultSets = parseInt(card.dataset.defaultSets, 10) || 1;
-      const defaultReps = parseInt(card.dataset.defaultReps, 10) || '';
-      const defaultDurUnit = card.dataset.defaultDurUnit || '';
-      const defaultDurRaw  = card.dataset.defaultDur ? parseFloat(card.dataset.defaultDur) : '';
-      // Convert stored seconds to the chosen display unit
-      const defaultDur = defaultDurRaw !== '' ? secsToUnit(defaultDurRaw, defaultDurUnit) : '';
+  function updateBadge() {
+    const n = activeCards.length;
+    countBadge.textContent = n + ' selected';
+    countBadge.classList.toggle('hidden', n === 0);
+    noExMsg.classList.toggle('hidden', n > 0);
+  }
 
-      // ── panel ────────────────────────────────────────────────────────────
-      const panel = document.createElement('div');
-      panel.className = 'rounded-xl border border-gray-200 bg-gray-50 p-4';
-      panel.dataset.idx = idx;
+  // ── Build one exercise panel ─────────────────────────────────────────────
+  function buildPanel(card) {
+    const exId        = parseInt(card.dataset.exerciseId, 10);
+    const exName      = card.dataset.exerciseName;
+    const defaultSets = parseInt(card.dataset.defaultSets, 10) || 1;
+    const defaultReps    = card.dataset.defaultReps !== '' ? card.dataset.defaultReps : '';
+    const defaultDurUnit = card.dataset.defaultDurUnit || '';
+    const defaultDurRaw  = card.dataset.defaultDur ? parseFloat(card.dataset.defaultDur) : '';
+    // Use the exercise's saved unit, or auto-pick from the duration value
+    const curUnitInit    = defaultDurUnit || pickUnit(defaultDurRaw);
+    const defaultDur     = defaultDurRaw !== '' ? secsToUnit(defaultDurRaw, curUnitInit) : '';
 
-      panel.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-          <span class="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white text-xs">${idx + 1}</span>
-            ${exName}
+    // default to Time only if exercise has a duration default but no reps default
+    let mode    = (defaultDur !== '' && defaultReps === '') ? 'time' : 'reps';
+    let curUnit = curUnitInit;
+    // per-mode value memory: array of strings, one per set
+    let repsMem = [];
+    let timeMem = [];
+
+    const panel = document.createElement('div');
+    panel.className = 'rounded-xl border border-gray-200 bg-gray-50 p-4';
+    panel.dataset.exId = exId;
+    panel.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <span class="flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <span class="panel-num inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white text-xs"></span>
+          ${exName}
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden text-xs font-semibold">
+            <button type="button" class="btn-mode-reps px-3 py-1.5 transition">Reps</button>
+            <button type="button" class="btn-mode-time px-3 py-1.5 border-l border-gray-200 transition">Time</button>
           </span>
+        </span>
+      </div>
+      <div class="flex items-center gap-3 mb-4">
+        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sets</label>
+        <div class="inline-flex items-center rounded-lg border border-gray-300 bg-white overflow-hidden">
+          <button type="button" class="btn-dec w-8 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition border-r border-gray-300">−</button>
+          <input type="number" class="sets-input w-10 h-9 text-center text-sm font-semibold text-gray-900 border-none outline-none bg-transparent" value="${defaultSets}" min="1" max="20">
+          <button type="button" class="btn-inc w-8 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition border-l border-gray-300">+</button>
         </div>
+        <select class="dur-unit hidden rounded-lg border border-gray-300 bg-white px-2 h-9 text-sm font-medium text-gray-700
+                       focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <option value="seconds" ${curUnitInit==='seconds' ? 'selected':''}>sec</option>
+          <option value="minutes" ${curUnitInit==='minutes' ? 'selected':''}>min</option>
+          <option value="hours"   ${curUnitInit==='hours'   ? 'selected':''}>hr</option>
+        </select>
+      </div>
+      <div class="set-rows space-y-2"></div>
+    `;
+    setPanels.appendChild(panel);
 
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Sets</label>
-          <div class="flex items-center gap-1">
-            <button type="button" class="btn-dec w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
-                                         hover:bg-gray-100 transition text-lg leading-none flex items-center justify-center">−</button>
-            <input type="number" class="sets-input w-14 rounded-lg border border-gray-300 bg-white px-2 py-1.5
-                                        text-center text-sm font-semibold text-gray-900
-                                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                   value="${defaultSets}" min="1" max="20">
-            <button type="button" class="btn-inc w-8 h-8 rounded-lg border border-gray-300 bg-white text-gray-600
-                                         hover:bg-gray-100 transition text-lg leading-none flex items-center justify-center">+</button>
-          </div>
-          <label class="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">Duration unit</label>
-          <select class="dur-unit rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-800
-                         focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            <option value="" ${!defaultDurUnit ? 'selected' : ''}>unit</option>
-            <option value="seconds" ${defaultDurUnit === 'seconds' ? 'selected' : ''}>seconds</option>
-            <option value="minutes" ${defaultDurUnit === 'minutes' ? 'selected' : ''}>minutes</option>
-            <option value="hours"   ${defaultDurUnit === 'hours'   ? 'selected' : ''}>hours</option>
-          </select>
-        </div>
+    const setsInput = panel.querySelector('.sets-input');
+    const durUnit   = panel.querySelector('.dur-unit');
+    const setRows   = panel.querySelector('.set-rows');
+    const btnReps   = panel.querySelector('.btn-mode-reps');
+    const btnTime   = panel.querySelector('.btn-mode-time');
 
-        <div class="set-rows space-y-2"></div>
-      `;
+    function applyModeStyle() {
+      const isTime = mode === 'time';
+      btnReps.className = `btn-mode-reps px-3 py-1.5 transition ${!isTime ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-800'}`;
+      btnTime.className = `btn-mode-time px-3 py-1.5 border-l border-gray-200 transition ${ isTime ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-800'}`;
+      durUnit.classList.toggle('hidden', !isTime);
+    }
 
-      setPanels.appendChild(panel);
+    function saveMem() {
+      const vals = [...setRows.querySelectorAll('.val-input')].map(i => i.value);
+      if (mode === 'reps') repsMem = vals; else timeMem = vals;
+    }
 
-      const setsInput = panel.querySelector('.sets-input');
-      const durUnit   = panel.querySelector('.dur-unit');
-      const setRows   = panel.querySelector('.set-rows');
-      let prevCount   = 0;
-
-      function renderRows(focusLast = false) {
-        const count = Math.max(1, Math.min(20, parseInt(setsInput.value, 10) || 1));
-        setsInput.value = count;
-
-        const existingReps = [...setRows.querySelectorAll('.rep-input')].map(i => i.value);
-        const existingDur  = [...setRows.querySelectorAll('.dur-input')].map(i => i.value);
-        setRows.innerHTML  = '';
-
-        for (let s = 0; s < count; s++) {
-          let initReps = existingReps[s] !== undefined ? existingReps[s]
-            : (defaultReps !== '' ? defaultReps : '');
-          let initDur  = existingDur[s]  !== undefined ? existingDur[s]
-            : (s === 0 ? defaultDur : '');
-
-          const row = document.createElement('div');
-          row.className = 'grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2';
-          row.innerHTML = `
-            <span class="text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
-            <input type="number"
-                   class="rep-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm
-                          font-medium text-gray-900 text-center
-                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                   placeholder="reps" min="0"
-                   value="${initReps}">
-            <input type="number"
-                   class="dur-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm
-                          font-medium text-gray-900 text-center
-                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                   placeholder="time" min="0" step="any"
-                   value="${initDur}">
-          `;
-          setRows.appendChild(row);
-        }
-
-        if (focusLast) {
-          const allInputs = setRows.querySelectorAll('.rep-input');
-          const lastInput = allInputs[allInputs.length - 1];
-          if (lastInput) requestAnimationFrame(() => requestAnimationFrame(() => lastInput.focus()));
-        } else if (idx === 0 && prevCount === 0) {
-          const firstInput = setRows.querySelector('.rep-input');
-          if (firstInput) requestAnimationFrame(() => requestAnimationFrame(() => firstInput.focus()));
-        }
-        prevCount = count;
+    function renderRows(focusLast = false) {
+      const count = Math.max(1, Math.min(20, parseInt(setsInput.value, 10) || 1));
+      setsInput.value = count;
+      const isTime = mode === 'time';
+      const mem = isTime ? timeMem : repsMem;
+      setRows.innerHTML = '';
+      for (let s = 0; s < count; s++) {
+        // 1. use memorised value, 2. use default for that mode, 3. empty
+        let initVal = (mem[s] !== undefined && mem[s] !== '') ? mem[s]
+          : (s === 0 ? (isTime ? defaultDur : defaultReps) : '');
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-[2.5rem_1fr] items-center gap-2';
+        row.innerHTML = `
+          <span class="text-xs text-gray-400 text-right shrink-0">Set ${s + 1}</span>
+          <input type="number" class="val-input min-w-0 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-900 text-center focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" placeholder="—" min="0" ${isTime ? 'step="any"' : ''} value="${initVal}">
+        `;
+        setRows.appendChild(row);
       }
+      if (focusLast) {
+        const all = setRows.querySelectorAll('.val-input');
+        if (all.length) requestAnimationFrame(() => requestAnimationFrame(() => all[all.length-1].focus()));
+      }
+    }
 
-      renderRows();
+    applyModeStyle();
+    renderRows();
 
-      panel.querySelector('.btn-dec').addEventListener('click', () => {
-        setsInput.value = Math.max(1, parseInt(setsInput.value, 10) - 1);
-        renderRows(false);
-      });
-      panel.querySelector('.btn-inc').addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        setsInput.value = Math.min(20, parseInt(setsInput.value, 10) + 1);
-        renderRows(true);
-      });
-      setsInput.addEventListener('change', () => renderRows(false));
+    btnReps.addEventListener('click', () => { saveMem(); mode = 'reps'; applyModeStyle(); renderRows(false); });
+    btnTime.addEventListener('click', () => { saveMem(); mode = 'time'; applyModeStyle(); renderRows(false); });
+    panel.querySelector('.btn-dec').addEventListener('click', () => { setsInput.value = Math.max(1, parseInt(setsInput.value,10)-1); renderRows(false); });
+    panel.querySelector('.btn-inc').addEventListener('click', e => { e.currentTarget.blur(); setsInput.value = Math.min(20, parseInt(setsInput.value,10)+1); renderRows(true); });
+    setsInput.addEventListener('change', () => renderRows(false));
+    durUnit.addEventListener('change', () => { curUnit = durUnit.value; hUnit.value = curUnit; });
 
-      // hidden fields: exercise_id[], reps[], duration[], duration_unit[]
-      const hId   = document.createElement('input');
-      hId.type    = 'hidden';
-      hId.name    = 'exercise_id[]';
-      hId.value   = exId;
-      hiddenFlds.appendChild(hId);
-
-      const hReps  = document.createElement('input');
-      hReps.type   = 'hidden';
-      hReps.name   = 'reps[]';
-      hReps.dataset.panelIdx = idx;
-      hiddenFlds.appendChild(hReps);
-
-      const hDur  = document.createElement('input');
-      hDur.type   = 'hidden';
-      hDur.name   = 'duration[]';
-      hDur.dataset.panelDurIdx = idx;
-      hiddenFlds.appendChild(hDur);
-
-      const hUnit  = document.createElement('input');
-      hUnit.type   = 'hidden';
-      hUnit.name   = 'duration_unit[]';
-      hUnit.dataset.panelUnitIdx = idx;
-      hUnit.value  = durUnit.value;  // already pre-selected to defaultDurUnit or ''
-      hiddenFlds.appendChild(hUnit);
-
-      // keep hidden unit in sync with select, and update text colour
-      syncUnitStyle(durUnit);
-      durUnit.addEventListener('change', () => {
-        hUnit.value = durUnit.value;
-        syncUnitStyle(durUnit);
-      });
-    });
+    const hId = document.createElement('input');
+    hId.type = 'hidden'; hId.name = 'exercise_id[]'; hId.value = exId; hId.dataset.hidExId = exId;
+    hiddenFlds.appendChild(hId);
+    const hReps = document.createElement('input');
+    hReps.type = 'hidden'; hReps.name = 'reps[]'; hReps.dataset.hidRepsId = exId;
+    hiddenFlds.appendChild(hReps);
+    const hDur = document.createElement('input');
+    hDur.type = 'hidden'; hDur.name = 'duration[]'; hDur.dataset.hidDurId = exId;
+    hiddenFlds.appendChild(hDur);
+    const hUnit = document.createElement('input');
+    hUnit.type = 'hidden'; hUnit.name = 'duration_unit[]'; hUnit.dataset.hidUnitId = exId;
+    hUnit.value = '';
+    hiddenFlds.appendChild(hUnit);
   }
 
-  // ── Step 1 → Step 2 ─────────────────────────────────────────────────────
-  btnCont.addEventListener('click', () => {
-    const sel = selectedCards();
-    if (sel.length === 0) {
+  function renumberPanels() {
+    [...setPanels.querySelectorAll('.panel-num')].forEach((el, i) => { el.textContent = i + 1; });
+  }
+
+  function removePanel(exId) {
+    const panel = setPanels.querySelector(`[data-ex-id="${exId}"]`);
+    if (panel) panel.remove();
+    hiddenFlds.querySelectorAll(`[data-hid-ex-id="${exId}"], [data-hid-reps-id="${exId}"], [data-hid-dur-id="${exId}"], [data-hid-unit-id="${exId}"]`).forEach(el => el.remove());
+    renumberPanels();
+  }
+
+  function activateCard(card) {
+    card.classList.add('active', 'border-indigo-600', 'bg-indigo-50');
+    card.classList.remove('border-gray-200');
+    const check = card.querySelector('.card-check');
+    check.classList.remove('hidden'); check.classList.add('flex');
+  }
+  function deactivateCard(card) {
+    card.classList.remove('active', 'border-indigo-600', 'bg-indigo-50');
+    card.classList.add('border-gray-200');
+    const check = card.querySelector('.card-check');
+    check.classList.add('hidden'); check.classList.remove('flex');
+  }
+
+  // ── Card click ────────────────────────────────────────────────────────────
+  form.querySelectorAll('.exercise-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const exId = parseInt(card.dataset.exerciseId, 10);
+      if (card.classList.contains('active')) {
+        deactivateCard(card);
+        activeCards = activeCards.filter(c => c !== card);
+        removePanel(exId);
+      } else {
+        activateCard(card);
+        activeCards.push(card);
+        buildPanel(card);
+        renumberPanels();
+      }
+      updateBadge();
+    });
+  });
+
+  updateBadge();
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  form.addEventListener('submit', e => {
+    const panels = [...setPanels.querySelectorAll('[data-ex-id]')];
+    if (panels.length === 0) {
+      e.preventDefault();
       noExMsg.classList.remove('hidden');
       noExMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-    buildStep2(sel, null);
-    step1.classList.add('hidden');
-    step2.classList.remove('hidden');
-    step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  // ── Submit: collect reps + duration, validate, populate hidden fields ────
-  const noRepsMsg = document.getElementById('no-reps-msg');
-
-  form.addEventListener('submit', e => {
-    const panels = [...setPanels.querySelectorAll('[data-idx]')];
-    if (panels.length === 0) {
-      e.preventDefault();
-      return;
-    }
-
     let firstError = null;
-
-    panels.forEach((panel, idx) => {
-      const repInputs = [...panel.querySelectorAll('.rep-input')];
-      const durInputs = [...panel.querySelectorAll('.dur-input')];
+    panels.forEach(panel => {
+      const exId      = panel.dataset.exId;
+      const valInputs = [...panel.querySelectorAll('.val-input')];
       const durUnit   = panel.querySelector('.dur-unit');
-      const repsVals  = [];
-      const durVals   = [];
-      let   rowError  = false;
-
-      repInputs.forEach((inp, s) => {
-        const rVal = inp.value.trim();
-        const dInp = durInputs[s];
-        const dVal = dInp ? dInp.value.trim() : '';
-        const hasReps = rVal !== '' && !isNaN(parseInt(rVal, 10)) && parseInt(rVal, 10) >= 0;
-        const hasDur  = dVal !== '' && !isNaN(parseFloat(dVal)) && parseFloat(dVal) > 0;
-
-        // If duration value entered but no unit selected, flag the unit select
-        if (hasDur && durUnit && !durUnit.value) {
-          durUnit.classList.add('border-red-400', 'ring-2', 'ring-red-200');
-          durUnit.addEventListener('change', () => durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
-          if (!firstError) firstError = durUnit;
-        } else if (durUnit) {
-          durUnit.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
-        }
-
-        if (!hasReps && !hasDur) {
+      const isTime    = !panel.querySelector('.btn-mode-time').classList.contains('text-gray-500');
+      const repsVals  = [], durVals = [];
+      valInputs.forEach(inp => {
+        const v = inp.value.trim();
+        const hasVal = v !== '' && !isNaN(parseFloat(v)) && parseFloat(v) >= 0;
+        if (!hasVal) {
           inp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
-          if (dInp) dInp.classList.add('border-red-400', 'ring-2', 'ring-red-200');
           inp.addEventListener('input', () => inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
-          if (dInp) dInp.addEventListener('input', () => dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200'), { once: true });
           if (!firstError) firstError = inp;
-          rowError = true;
         } else {
           inp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
-          if (dInp) dInp.classList.remove('border-red-400', 'ring-2', 'ring-red-200');
         }
-
-        repsVals.push(hasReps ? parseInt(rVal, 10) : '');
-        durVals.push(hasDur  ? parseFloat(dVal)    : '');
+        if (isTime) {
+          repsVals.push('');
+          durVals.push(hasVal ? parseFloat(v) : '');
+        } else {
+          repsVals.push(hasVal ? parseInt(v, 10) : '');
+          durVals.push('');
+        }
       });
-
-      const hReps = hiddenFlds.querySelector(`[data-panel-idx="${idx}"]`);
+      const hReps = hiddenFlds.querySelector(`[data-hid-reps-id="${exId}"]`);
       if (hReps) hReps.value = repsVals.join(',');
-
-      const hDur = hiddenFlds.querySelector(`[data-panel-dur-idx="${idx}"]`);
+      const hDur = hiddenFlds.querySelector(`[data-hid-dur-id="${exId}"]`);
       if (hDur) hDur.value = durVals.join(',');
+      const hUnit = hiddenFlds.querySelector(`[data-hid-unit-id="${exId}"]`);
+      if (hUnit) hUnit.value = isTime ? (durUnit ? durUnit.value : 'seconds') : '';
     });
-
     if (firstError) {
       e.preventDefault();
       noRepsMsg.classList.remove('hidden');
@@ -552,4 +432,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+{% endif %}
 {% endblock %}

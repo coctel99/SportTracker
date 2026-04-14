@@ -191,7 +191,9 @@ def get_sessions_for_day(user_id: int, session_date: str) -> list[dict]:
     Returns a list of dicts::
 
         [{"id": int, "session_date": str,
-          "exercises": [{"name": str, "total_reps": int}, ...]}, ...]
+          "exercises": [{"name": str, "total_reps": int, "total_sets": int,
+                         "total_seconds": int,
+                         "sets": [(reps, duration_seconds), ...]}, ...]}, ...]
     """
     db = get_db()
     session_rows = db.execute(
@@ -206,25 +208,47 @@ def get_sessions_for_day(user_id: int, session_date: str) -> list[dict]:
 
     result = []
     for s in session_rows:
-        exercises = db.execute(
+        # Per-set detail ordered by position then set_number
+        set_rows = db.execute(
             """
-            SELECT e.name,
-                   COALESCE(SUM(es.reps), 0) AS total_reps,
-                   COUNT(es.id)              AS total_sets
+            SELECT e.id AS exercise_id, e.name,
+                   se.position, es.set_number,
+                   es.reps, es.duration_seconds
             FROM session_exercises se
-            JOIN exercises e  ON e.id  = se.exercise_id
+            JOIN exercises e ON e.id = se.exercise_id
             JOIN exercise_sets es ON es.session_exercise_id = se.id
             WHERE se.session_id = ?
-            GROUP BY e.id, e.name
-            ORDER BY se.position ASC
+            ORDER BY se.position ASC, es.set_number ASC
             """,
             (s["id"],),
         ).fetchall()
+
+        # Group into per-exercise dicts
+        exercises: list[dict] = []
+        for row in set_rows:
+            if not exercises or exercises[-1]["name"] != row["name"]:
+                exercises.append(
+                    {
+                        "name": row["name"],
+                        "sets": [],
+                        "total_reps": 0,
+                        "total_sets": 0,
+                        "total_seconds": 0,
+                    }
+                )
+            ex = exercises[-1]
+            ex["sets"].append((row["reps"], row["duration_seconds"]))
+            ex["total_sets"] += 1
+            if row["reps"] is not None:
+                ex["total_reps"] += row["reps"]
+            if row["duration_seconds"] is not None:
+                ex["total_seconds"] += row["duration_seconds"]
+
         result.append(
             {
                 "id": s["id"],
                 "session_date": s["session_date"],
-                "exercises": [dict(e) for e in exercises],
+                "exercises": exercises,
             }
         )
     return result
