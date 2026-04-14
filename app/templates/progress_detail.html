@@ -3,6 +3,10 @@
 
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
+<style>
+  .chart-wrap { position: relative; height: 320px; }
+  @media (min-width: 640px) { .chart-wrap { height: 420px; } }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -35,7 +39,7 @@
   </div>
 
   <!-- Chart -->
-  <div id="chart-wrap">
+  <div id="chart-wrap" class="chart-wrap">
     <canvas id="chart"></canvas>
   </div>
 
@@ -116,7 +120,7 @@
       data: { labels: data.labels, datasets },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         animation: { duration: 400 },
         transitions: { hide: { animation: { duration: 0 } }, show: { animation: { duration: 0 } } },
         interaction: { mode: 'index', intersect: false },
