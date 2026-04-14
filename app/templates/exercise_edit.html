@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Edit {{ exercise['name'] }} – Sport Tracker{% endblock %}
+
+{% macro secs_to_unit(seconds, unit) %}
+  {%- if seconds and unit -%}
+    {%- if unit == 'hours' -%}
+      {%- set v = (seconds / 3600) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- elif unit == 'minutes' -%}
+      {%- set v = (seconds / 60) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- else -%}{{ seconds }}
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
 
 <div class="mb-6 flex items-center gap-3">
@@ -54,7 +66,7 @@
         <div class="flex gap-2">
           <input id="default-duration" name="default_duration" type="number" min="0" step="any"
                  placeholder="e.g. 60"
-                 value="{{ request.form.get('default_duration', exercise['default_duration_seconds'] or '') }}"
+                 value="{{ request.form.get('default_duration', secs_to_unit(exercise['default_duration_seconds'], exercise['default_duration_unit'] or '') or '') }}"
                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
                         text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
                         focus:ring-2 focus:ring-indigo-200 transition">
