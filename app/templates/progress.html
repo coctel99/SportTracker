@@ -6,12 +6,18 @@
     {%- set h   = total_seconds // 3600 %}
     {%- set m   = (total_seconds % 3600) // 60 %}
     {%- set sec = total_seconds % 60 %}
-    {%- set ns  = namespace(out='') %}
-    {%- if h   > 0 %}{% set ns.out = ns.out ~ h   ~ ' h'   %}{% endif %}
-    {%- if m   > 0 %}{% set ns.out = ns.out ~ (', ' if ns.out else '') ~ m   ~ ' min' %}{% endif %}
-    {%- if sec > 0 %}{% set ns.out = ns.out ~ (', ' if ns.out else '') ~ sec ~ ' sec' %}{% endif %}
-    {{- ns.out -}}
-  {%- else %}—{%- endif %}
+    <span class="inline-flex items-center gap-1 flex-wrap">
+      {%- if h > 0 %}
+        <span class="font-semibold text-indigo-600">{{ h }}</span><span class="text-gray-400">h</span>
+      {%- endif %}
+      {%- if m > 0 %}
+        <span class="font-semibold text-indigo-600">{{ m }}</span><span class="text-gray-400">min</span>
+      {%- endif %}
+      {%- if sec > 0 %}
+        <span class="font-semibold text-indigo-600">{{ sec }}</span><span class="text-gray-400">sec</span>
+      {%- endif %}
+    </span>
+  {%- else %}<span class="text-gray-300">—</span>{%- endif %}
 {% endmacro %}
 
 {% block head %}
@@ -29,8 +35,24 @@
 
   <!-- ── Overview chart ──────────────────────────────────────────────────── -->
   <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 mb-6">
-    <h2 class="text-base font-semibold text-gray-900 mb-1">Top exercises over time</h2>
-    <p class="text-xs text-gray-400 mb-5">Reps per session · up to 5 exercises</p>
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900 mb-0.5">Top exercises over time</h2>
+        <p class="text-xs text-gray-400">Reps per session (or time for time-based) · up to 5 exercises</p>
+      </div>
+      <!-- Time unit picker (only relevant when there are time-based series) -->
+      <div id="time-unit-picker" class="hidden items-center gap-2 shrink-0">
+        <label for="time-unit-select" class="text-xs text-gray-400 whitespace-nowrap">Time unit:</label>
+        <select id="time-unit-select"
+                class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 cursor-pointer">
+          <option value="auto">auto</option>
+          <option value="hr">hours</option>
+          <option value="min">minutes</option>
+          <option value="sec">seconds</option>
+        </select>
+      </div>
+    </div>
 
     <div id="overview-no-data" class="hidden flex-col items-center justify-center py-10 text-center">
       <svg class="w-10 h-10 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -71,7 +93,7 @@
                 {% endif %}
               </td>
               <td class="px-6 py-3.5 text-gray-600">
-                <span class="font-semibold text-indigo-600">{{ format_duration(e['total_seconds']) }}</span>
+                {{ format_duration(e['total_seconds']) }}
               </td>
               <td class="px-6 py-3.5 text-right">
                 <a href="{{ url_for('routes.progress_detail', exercise_id=e['id']) }}"
@@ -94,12 +116,14 @@
         <li class="flex items-center justify-between px-4 py-4">
           <div>
             <p class="text-sm font-medium text-gray-900">{{ e['name'] }}</p>
+            {% if e['total_reps'] > 0 %}
             <p class="text-xs text-gray-400 mt-0.5">
               <span class="font-semibold text-indigo-600">{{ e['total_reps'] }}</span> total reps
             </p>
+            {% endif %}
             {% if e['total_seconds'] > 0 %}
             <p class="text-xs text-gray-400 mt-0.5">
-              <span class="font-semibold text-indigo-600">{{ format_duration(e['total_seconds']) }}</span> total time
+              {{ format_duration(e['total_seconds']) }} total time
             </p>
             {% endif %}
           </div>
@@ -133,64 +157,145 @@
 {% block scripts %}
 {% if exercises %}
 <script>
-  // 5 visually distinct colours for up to 5 series
-  const PALETTE = [
-    '#4f46e5','#0891b2','#16a34a','#d97706','#dc2626'
-  ];
+  const PALETTE = ['#4f46e5','#0891b2','#16a34a','#d97706','#dc2626'];
 
-  async function loadOverviewChart() {
-    const res = await fetch("{{ url_for('routes.progress_overview') }}");
-    if (!res.ok) return;
-    const data = await res.json();
+  // Full names for the y-axis title per unit key
+  const UNIT_AXIS_LABELS = { auto: 'time (auto)', hr: 'hours', min: 'minutes', sec: 'seconds' };
 
-    if (!data.labels || data.labels.length === 0) {
-      document.getElementById('overview-no-data').style.display = 'flex';
-      document.getElementById('overview-chart-wrap').style.display = 'none';
-      return;
+  // Pick the most human-readable time unit for a given max value in seconds.
+  function pickTimeUnit(maxSeconds) {
+    if (maxSeconds >= 3600) return { divisor: 3600, label: 'hr'  };
+    if (maxSeconds >= 60)   return { divisor: 60,   label: 'min' };
+    return                         { divisor: 1,    label: 'sec' };
+  }
+
+  // Convert a forced unit key ('auto'|'hr'|'min'|'sec') to a unit descriptor.
+  function forcedUnit(key, maxSeconds) {
+    if (key === 'hr')  return { divisor: 3600, label: 'hr'  };
+    if (key === 'min') return { divisor: 60,   label: 'min' };
+    if (key === 'sec') return { divisor: 1,    label: 'sec' };
+    return pickTimeUnit(maxSeconds); // 'auto'
+  }
+
+  let overviewChart = null;
+  let overviewData  = null;   // raw API response cached after first fetch
+  let activeUnit    = 'auto'; // currently selected picker button
+
+  function buildOverviewChart(unitKey) {
+    const data = overviewData;
+    const hasTimeSeries = data.series.some(s => s.is_time_based);
+    const hasRepsSeries = data.series.some(s => !s.is_time_based);
+
+    // Show / hide picker
+    const picker = document.getElementById('time-unit-picker');
+    if (hasTimeSeries) picker.style.display = 'flex';
+
+    const datasets = data.series.map((s, i) => {
+      let displayData = s.data;
+      let timeUnit    = null;
+
+      if (s.is_time_based) {
+        timeUnit    = forcedUnit(unitKey, s.max_seconds || Math.max(...s.data));
+        displayData = s.data.map(v => Math.round(v / timeUnit.divisor * 10) / 10);
+      }
+
+      return {
+        label:           s.name,
+        data:            displayData,
+        borderColor:     PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[i % PALETTE.length] + '12',
+        fill:            false,
+        tension:         0.35,
+        pointRadius:     4,
+        pointHoverRadius:6,
+        borderWidth:     2,
+        isTimeBased:     s.is_time_based,
+        timeUnit,
+        yAxisID:         s.is_time_based ? 'yTime' : 'yReps',
+      };
+    });
+
+    const scales = {
+      x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 }, maxRotation: 45, minRotation: 45 } },
+    };
+
+    if (hasRepsSeries) {
+      scales.yReps = {
+        type: 'linear', position: 'left',
+        beginAtZero: true, grace: '10%',
+        grid: { color: '#f1f5f9' },
+        ticks: { font: { family: 'Inter', size: 11 } },
+        title: hasTimeSeries
+          ? { display: true, text: 'reps', font: { family: 'Inter', size: 11 }, color: '#6b7280' }
+          : { display: false },
+      };
     }
 
-    const datasets = data.series.map((s, i) => ({
-      label:           s.name,
-      data:            s.data,
-      borderColor:     PALETTE[i % PALETTE.length],
-      backgroundColor: PALETTE[i % PALETTE.length] + '12',
-      fill:            false,
-      tension:         0.35,
-      pointRadius:     4,
-      pointHoverRadius:6,
-      borderWidth:     2,
-    }));
+    if (hasTimeSeries) {
+      const axisLabel = UNIT_AXIS_LABELS[unitKey] || 'time';
+      scales.yTime = {
+        type: 'linear', position: hasRepsSeries ? 'right' : 'left',
+        beginAtZero: true, grace: '10%',
+        grid: hasRepsSeries ? { drawOnChartArea: false } : { color: '#f1f5f9' },
+        ticks: { font: { family: 'Inter', size: 11 } },
+        title: hasRepsSeries
+          ? { display: true, text: axisLabel, font: { family: 'Inter', size: 11 }, color: '#6b7280' }
+          : { display: false },
+      };
+    }
 
-    new Chart(document.getElementById('overview-chart'), {
+    // Destroy previous instance before re-creating
+    if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
+
+    overviewChart = new Chart(document.getElementById('overview-chart'), {
       type: 'line',
       data: { labels: data.labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        animation: { duration: 400 },
+        animation: { duration: 300 },
         transitions: { hide: { animation: { duration: 0 } }, show: { animation: { duration: 0 } } },
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            position: 'top',
-            labels: { font: { family: 'Inter', size: 12 }, boxWidth: 12, padding: 16 }
-          },
+          legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 }, boxWidth: 12, padding: 16 } },
           tooltip: {
             bodyFont:  { family: 'Inter' },
             titleFont: { family: 'Inter', weight: '600' },
             callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} reps`
+              label: ctx => {
+                if (ctx.dataset.isTimeBased) {
+                  return ` ${ctx.dataset.label}: ${ctx.parsed.y} ${ctx.dataset.timeUnit.label}`;
+                }
+                return ` ${ctx.dataset.label}: ${ctx.parsed.y} reps`;
+              }
             }
           }
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
-          y: { beginAtZero: true, grace: '10%', grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Inter', size: 11 } } }
-        },
+        scales,
         layout: { padding: { top: 8 } }
       }
     });
   }
+
+  async function loadOverviewChart() {
+    const res = await fetch("{{ url_for('routes.progress_overview') }}");
+    if (!res.ok) return;
+    overviewData = await res.json();
+
+    if (!overviewData.labels || overviewData.labels.length === 0) {
+      document.getElementById('overview-no-data').style.display = 'flex';
+      document.getElementById('overview-chart-wrap').style.display = 'none';
+      return;
+    }
+
+    buildOverviewChart(activeUnit);
+  }
+
+  // Unit picker select logic
+  document.getElementById('time-unit-select').addEventListener('change', function () {
+    activeUnit = this.value;
+    if (overviewData) buildOverviewChart(activeUnit);
+  });
 
   document.addEventListener('DOMContentLoaded', loadOverviewChart);
 </script>

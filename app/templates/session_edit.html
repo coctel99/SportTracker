@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Edit Session {{ session['session_date'] }} – Sport Tracker{% endblock %}
+
+{% macro secs_to_unit(seconds, unit) %}
+  {%- if seconds and unit -%}
+    {%- if unit == 'hours' -%}
+      {%- set v = (seconds / 3600) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- elif unit == 'minutes' -%}
+      {%- set v = (seconds / 60) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- else -%}{{ seconds }}
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
 <div class="mb-6 flex items-center gap-3">
   <a href="{{ url_for('routes.session_detail', session_id=session['id']) }}"
@@ -105,9 +117,9 @@
             {% if e['default_sets'] or e['default_reps'] or e['default_duration_seconds'] %}
               <p class="text-xs text-gray-400">
                 {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
-                {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
-                  {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
-                {% endif %}
+                  {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
+                    {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
+                  {% endif %}
               </p>
             {% endif %}
           </button>
@@ -260,6 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
       sel.classList.add('text-gray-800');
     }
   }
+  // Convert raw seconds to a display value in the given unit string.
+  function secsToUnit(seconds, unit) {
+    if (seconds === '' || seconds === null || seconds === undefined) return '';
+    if (unit === 'hours')   return Math.round(seconds / 3600 * 100) / 100;
+    if (unit === 'minutes') return Math.round(seconds / 60   * 100) / 100;
+    return seconds; // seconds or no unit → keep raw
+  }
+
   function buildStep2(sel) {
     setPanels.innerHTML  = '';
     hiddenFlds.innerHTML = '';
@@ -270,12 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const prefillSets = preIdx !== -1 ? preSets[preIdx] : null;
       const defaultSets = prefillSets ? prefillSets.length : (parseInt(card.dataset.defaultSets, 10) || 1);
       const defaultReps = parseInt(card.dataset.defaultReps, 10) || '';
-      const defaultDur     = card.dataset.defaultDur     || '';
       const defaultDurUnit = card.dataset.defaultDurUnit || '';
-      // For prefilled sets, determine the unit from existing data (stored as raw seconds)
-      // so we default to 'seconds' when there's saved duration data, otherwise use card default
       const prefillHasDur = prefillSets && prefillSets.some(s => s[1] !== null && s[1] !== undefined);
       const initUnit = prefillHasDur ? 'seconds' : defaultDurUnit;
+      const defaultDurRaw  = card.dataset.defaultDur ? parseFloat(card.dataset.defaultDur) : '';
+      const defaultDur = defaultDurRaw !== '' ? secsToUnit(defaultDurRaw, initUnit) : '';
       const panel = document.createElement('div');
       panel.className = 'rounded-xl border border-gray-200 bg-gray-50 p-4';
       panel.dataset.idx = idx;
@@ -324,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
           let initDur = existingDur[s] !== undefined && existingDur[s] !== ''
             ? existingDur[s]
             : (prefillSets && prefillSets[s] !== undefined && prefillSets[s][1] !== null
-               ? prefillSets[s][1]
+               ? secsToUnit(prefillSets[s][1], initUnit)
                : (s === 0 ? defaultDur : ''));
           const row = document.createElement('div');
           row.className = 'grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2';

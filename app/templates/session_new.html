@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Log Session – Sport Tracker{% endblock %}
+
+{% macro secs_to_unit(seconds, unit) %}
+  {%- if seconds and unit -%}
+    {%- if unit == 'hours' -%}
+      {%- set v = (seconds / 3600) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- elif unit == 'minutes' -%}
+      {%- set v = (seconds / 60) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- else -%}{{ seconds }}
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
 
 <div class="mb-6">
@@ -127,7 +139,7 @@
                 <p class="text-xs text-gray-400">
                   {% if e['default_sets'] or e['default_reps'] %}{{ e['default_sets'] or '–' }} × {{ e['default_reps'] or '–' }}{% endif %}
                   {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
-                    {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
+                    {% if e['default_sets'] or e['default_reps'] %}&nbsp;·&nbsp;{% endif %}{{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
                   {% endif %}
                 </p>
               {% endif %}
@@ -295,6 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Convert raw seconds to a display value in the given unit string.
+  function secsToUnit(seconds, unit) {
+    if (seconds === '' || seconds === null || seconds === undefined) return '';
+    if (unit === 'hours')   return Math.round(seconds / 3600 * 100) / 100;
+    if (unit === 'minutes') return Math.round(seconds / 60   * 100) / 100;
+    return seconds; // seconds or no unit → keep raw
+  }
+
   // ── Build Step-2 panels ──────────────────────────────────────────────────
   function buildStep2(sel, prefillData) {
     setPanels.innerHTML  = '';
@@ -305,8 +325,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const exName      = card.dataset.exerciseName;
       const defaultSets = parseInt(card.dataset.defaultSets, 10) || 1;
       const defaultReps = parseInt(card.dataset.defaultReps, 10) || '';
-      const defaultDur  = card.dataset.defaultDur  || '';
       const defaultDurUnit = card.dataset.defaultDurUnit || '';
+      const defaultDurRaw  = card.dataset.defaultDur ? parseFloat(card.dataset.defaultDur) : '';
+      // Convert stored seconds to the chosen display unit
+      const defaultDur = defaultDurRaw !== '' ? secsToUnit(defaultDurRaw, defaultDurUnit) : '';
 
       // ── panel ────────────────────────────────────────────────────────────
       const panel = document.createElement('div');

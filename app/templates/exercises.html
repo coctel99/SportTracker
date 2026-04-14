@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Exercises – Sport Tracker{% endblock %}
+
+{% macro secs_to_unit(seconds, unit) %}
+  {%- if seconds and unit -%}
+    {%- if unit == 'hours' -%}
+      {%- set v = (seconds / 3600) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- elif unit == 'minutes' -%}
+      {%- set v = (seconds / 60) | round(2) -%}{{ v | int if v == v | int else v }}
+    {%- else -%}{{ seconds }}
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
 
 <div class="mb-6 flex items-center justify-between">
@@ -103,7 +115,7 @@
               </td>
               <td class="px-6 py-3.5 text-gray-500">
                 {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
-                  {{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
+                  {{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
                 {% else %}
                   <span class="text-gray-300">—</span>
                 {% endif %}
@@ -149,7 +161,7 @@
                 No defaults set
               {% endif %}
               {% if e['default_duration_seconds'] and e['default_duration_unit'] %}
-                · {{ e['default_duration_seconds'] }} {{ e['default_duration_unit'] }}
+                · {{ secs_to_unit(e['default_duration_seconds'], e['default_duration_unit']) }} {{ e['default_duration_unit'] }}
               {% endif %}
             </p>
           </div>
