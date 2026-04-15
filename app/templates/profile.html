@@ -1,470 +1,270 @@
 {% extends 'base.html' %}
-{% block title %}Profile – Sport Tracker{% endblock %}
+{% block title %}{{ user['name'] or user['username'] }} – Sport Tracker{% endblock %}
 {% block content %}
 
-<div class="mb-6 max-w-lg mx-auto">
-  <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
-  <p class="text-sm text-gray-500 mt-0.5">Your personal details</p>
-</div>
+{% macro fmt_duration(seconds) %}
+  {%- if seconds >= 3600 -%}
+    {%- set v = seconds / 3600 -%}{{ (v | int) if v == (v | int) else (v | round(1)) }} h
+  {%- elif seconds >= 60 -%}
+    {%- set v = seconds / 60 -%}{{ (v | int) if v == (v | int) else (v | round(1)) }} min
+  {%- else -%}
+    {{ seconds }} sec
+  {%- endif -%}
+{% endmacro %}
 
-<div class="space-y-5 max-w-lg mx-auto">
+{% macro fmt_duration_long(seconds) %}
+  {%- set h = (seconds // 3600) | int -%}
+  {%- set m = ((seconds % 3600) // 60) | int -%}
+  {%- set s = (seconds % 60) | int -%}
+  {%- if h > 0 and m > 0 -%}
+    {{ h }} hour{% if h != 1 %}s{% endif %} {{ m }} minute{% if m != 1 %}s{% endif %}
+  {%- elif h > 0 -%}
+    {{ h }} hour{% if h != 1 %}s{% endif %}
+  {%- elif m > 0 and s > 0 -%}
+    {{ m }} minute{% if m != 1 %}s{% endif %} {{ s }} second{% if s != 1 %}s{% endif %}
+  {%- elif m > 0 -%}
+    {{ m }} minute{% if m != 1 %}s{% endif %}
+  {%- else -%}
+    {{ s }} second{% if s != 1 %}s{% endif %}
+  {%- endif -%}
+{% endmacro %}
 
-  <!-- ── Account block ──────────────────────────────────────────────────── -->
-  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm">
-    <div class="px-6 py-4 border-b border-gray-100">
-      <h2 class="text-sm font-semibold text-gray-700">Account</h2>
-      <p class="text-xs text-gray-400 mt-0.5">Account information</p>
-    </div>
-    <div class="divide-y divide-gray-100">
-      <div class="flex items-center px-6 py-4 gap-4">
-        <span class="w-36 text-sm font-medium text-gray-500">Email</span>
-        <span class="text-sm text-gray-900">{{ user['email'] }}</span>
-      </div>
+{% macro fmt_session_summary(reps, seconds) %}
+  {%- if reps > 0 and seconds > 0 -%}
+    {{ "{:,}".format(reps) }} reps, {{ fmt_duration_long(seconds) }}
+  {%- elif reps > 0 -%}
+    {{ "{:,}".format(reps) }} reps
+  {%- elif seconds > 0 -%}
+    {{ fmt_duration_long(seconds) }}
+  {%- else -%}
+    —
+  {%- endif -%}
+{% endmacro %}
 
-      <!-- Password row -->
-      <div>
-        <!-- View state -->
-        <div id="pw-view" class="{{ 'hidden' if pw_open else 'flex' }} items-center px-6 py-4 gap-4">
-          <span class="w-36 text-sm font-medium text-gray-500">Password</span>
-          <span class="flex-1 text-sm text-gray-400 tracking-widest">••••••••</span>
-          <button id="btn-pw-edit" type="button"
-                  class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
-                         text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
+<div class="max-w-2xl mx-auto">
+
+  {# ── Hero card ─────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden mb-5">
+    <div class="h-24 bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600"></div>
+    <div class="px-6 pb-5">
+      <div class="flex items-end justify-between -mt-10 mb-3">
+        <!-- Avatar -->
+        <div class="inline-flex h-20 w-20 items-center justify-center rounded-full
+                    bg-indigo-600 border-4 border-white shadow text-3xl font-bold text-white select-none">
+          {{ (user['name'] or user['username'])[0].upper() }}
+        </div>
+
+        <!-- Action button: Settings (own) or Add/Remove friend (other) -->
+        {% if is_own_profile %}
+          <a href="{{ url_for('routes.settings') }}"
+             class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
+                    text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            Change
-          </button>
-        </div>
-
-        <!-- Edit state (hidden by default) -->
-        <div id="pw-edit" class="{{ '' if pw_open else 'hidden' }} px-6 py-5 space-y-4">
-          <form id="pw-form" method="post"
-                action="{{ url_for('routes.change_password_view') }}" novalidate>
+            Settings
+          </a>
+        {% elif is_friend %}
+          <form method="post" action="{{ url_for('routes.remove_friend', target_id=user['id']) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <div class="space-y-3">
-
-              <div>
-                <label for="current_password" class="block text-xs font-medium text-gray-500 mb-1.5">
-                  Current password
-                </label>
-                <input id="current_password" name="current_password" type="password" autocomplete="current-password"
-                       placeholder="••••••••"
-                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                              text-gray-900 placeholder:text-gray-400 shadow-sm
-                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-              </div>
-
-              <div>
-                <label for="new_password" class="block text-xs font-medium text-gray-500 mb-1.5">
-                  New password <span class="text-gray-400 font-normal">— min. 8 characters</span>
-                </label>
-                <input id="new_password" name="new_password" type="password" autocomplete="new-password"
-                       placeholder="••••••••"
-                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                              text-gray-900 placeholder:text-gray-400 shadow-sm
-                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-              </div>
-
-              <div>
-                <label for="confirm_password" class="block text-xs font-medium text-gray-500 mb-1.5">
-                  Confirm new password
-                </label>
-                <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password"
-                       placeholder="••••••••"
-                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                              text-gray-900 placeholder:text-gray-400 shadow-sm
-                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-              </div>
-
-              <p id="pw-error" class="hidden flex items-center gap-1.5 text-sm text-red-700">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                </svg>
-                <span id="pw-error-text"></span>
-              </p>
-
-              <div class="flex items-center gap-2 pt-1">
-                <button type="submit"
-                        class="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm
-                               hover:bg-indigo-700 transition active:scale-95">
-                  Save
-                </button>
-                <button id="btn-pw-cancel" type="button"
-                        class="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium
-                               text-gray-600 hover:bg-gray-50 transition active:scale-95">
-                  Cancel
-                </button>
-              </div>
-
-            </div>
+            <input type="hidden" name="next" value="{{ url_for('routes.user_profile', username=user['username']) }}">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white
+                           px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-red-50
+                           hover:border-red-300 hover:text-red-600 transition active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+              </svg>
+              Friends
+            </button>
           </form>
-        </div>
+        {% else %}
+          <form method="post" action="{{ url_for('routes.add_friend', target_id=user['id']) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ url_for('routes.user_profile', username=user['username']) }}">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5
+                           text-sm font-medium text-white hover:bg-indigo-700 transition active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+              </svg>
+              Add friend
+            </button>
+          </form>
+        {% endif %}
       </div>
 
-    </div>
-  </div>
-
-  <!-- ── Personal details block ──────────────────────────────────────────── -->
-  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm">
-
-    <!-- Header row with Edit / Save / Cancel -->
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <div>
-        <h2 class="text-sm font-semibold text-gray-700">Personal details</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Name, date of birth, weight</p>
-      </div>
-      <!-- View-mode button -->
-      <button id="btn-edit" type="button"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5
-                     text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
-        </svg>
-        Edit
-      </button>
-      <!-- Edit-mode buttons (hidden by default) -->
-      <div id="edit-actions" class="hidden items-center gap-2">
-        <button type="submit" form="profile-form"
-                class="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm
-                       hover:bg-indigo-700 transition active:scale-95">
-          Save
-        </button>
-        <button id="btn-cancel" type="button"
-                class="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium
-                       text-gray-600 hover:bg-gray-50 transition active:scale-95">
-          Cancel
-        </button>
-      </div>
-    </div>
-
-    <!-- View mode -->
-    <div id="view-mode" class="divide-y divide-gray-100">
-      <div class="flex items-center px-6 py-4 gap-4">
-        <span class="w-36 text-sm font-medium text-gray-500">Full Name</span>
-        <span id="view-name" class="text-sm text-gray-900">{{ user['name'] or '—' }}</span>
-      </div>
-      <div class="flex items-center px-6 py-4 gap-4">
-        <span class="w-36 text-sm font-medium text-gray-500">Date of Birth</span>
-        <span id="view-dob" class="text-sm text-gray-900">{{ user['date_of_birth'] or '—' }}</span>
-      </div>
-      <div class="flex items-center px-6 py-4 gap-4">
-        <span class="w-36 text-sm font-medium text-gray-500">Weight</span>
-        <span id="view-weight" class="text-sm text-gray-900">
-          {% if user['weight'] %}{{ user['weight'] | round(1) }} kg{% else %}—{% endif %}
-        </span>
-      </div>
-    </div>
-
-    <!-- Edit mode (hidden by default) -->
-    <form id="profile-form" method="post" action="{{ url_for('routes.edit_profile') }}" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <div id="edit-mode" class="hidden divide-y divide-gray-100">
-
-        <!-- Name -->
-        <div class="px-6 py-4">
-          <label for="name" class="block text-xs font-medium text-gray-500 mb-1.5">
-            Full Name <span class="text-red-500">*</span>
-          </label>
-          <input id="name" name="name" type="text" autocomplete="name"
-                 value="{{ user['name'] or '' }}"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                        text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none
-                        focus:ring-2 focus:ring-indigo-200 transition">
-          <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      <!-- Name, username, meta -->
+      <h1 class="text-xl font-bold text-gray-900">
+        {{ user['name'] or user['username'] }}
+        {% if user['name'] %}
+          <span class="text-sm font-normal text-gray-400 ml-1">@{{ user['username'] }}</span>
+        {% endif %}
+      </h1>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
+        {% if age is not none and age is not undefined %}
+          <span class="flex items-center gap-1">
+            <!-- user / person icon -->
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
             </svg>
-            <span>Name is required.</span>
-          </p>
-        </div>
-
-        <!-- Date of Birth -->
-        <div class="px-6 py-4">
-          <label for="date_of_birth" class="flex items-center gap-2 mb-1.5">
-            <span class="text-xs font-medium text-gray-500">Date of Birth</span>
-            <span class="text-xs font-normal text-gray-400">— optional</span>
-          </label>
-          <input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday"
-                 value="{{ user['date_of_birth'] or '' }}"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                        {{ 'text-gray-900' if user['date_of_birth'] else 'text-gray-400' }} shadow-sm
-                        focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-                 onchange="this.classList.toggle('text-gray-400',!this.value);this.classList.toggle('text-gray-900',!!this.value)">
-        </div>
-
-        <!-- Weight -->
-        <div class="px-6 py-4">
-          <label for="weight" class="flex items-center gap-2 mb-1.5">
-            <span class="text-xs font-medium text-gray-500">Weight</span>
-            <span class="text-xs font-normal text-gray-400">— optional</span>
-          </label>
-          <div class="relative">
-            <input id="weight" name="weight" type="number" min="1" max="500" step="0.1"
-                   placeholder="70"
-                   value="{{ user['weight'] or '' }}"
-                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm
-                          text-gray-900 placeholder:text-gray-400 shadow-sm
-                          focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-900">kg</span>
-          </div>
-        </div>
-
+            {{ age }} years old
+          </span>
+        {% endif %}
+        {% if user['weight'] %}
+          <span class="flex items-center gap-1">
+            <!-- kettlebell icon: circle handle + trapezoid wider at bottom -->
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="5" r="2.5"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 9h14l3 12H2L5 9z"/>
+            </svg>
+            {{ user['weight'] | round(1) }} kg
+          </span>
+        {% endif %}
+        {% if first_session %}
+          <span class="flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5"/>
+            </svg>
+            Training since {{ first_session }}
+          </span>
+        {% endif %}
       </div>
-    </form>
-
-  </div><!-- /personal details block -->
-
-  <!-- Export data -->
-  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm">
-    <div class="px-6 py-4 border-b border-gray-100">
-      <h2 class="text-sm font-semibold text-gray-700">Export data</h2>
-      <p class="text-xs text-gray-400 mt-0.5">Download all your sessions and exercises</p>
-    </div>
-    <div class="px-6 py-4 flex items-center gap-3">
-      <a href="{{ url_for('routes.export_data', fmt='csv') }}"
-         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2
-                text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-        </svg>
-        Download CSV
-      </a>
-      <a href="{{ url_for('routes.export_data', fmt='json') }}"
-         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2
-                text-sm font-medium text-gray-600 hover:bg-gray-50 transition active:scale-95">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-        </svg>
-        Download JSON
-      </a>
     </div>
   </div>
 
-  <!-- Danger zone -->
-  <div class="rounded-2xl bg-white border border-red-200 shadow-sm">
-    <div class="px-6 py-4 border-b border-red-100">
-      <h2 class="text-sm font-semibold text-red-600">Danger zone</h2>
-      <p class="text-xs text-gray-400 mt-0.5">Irreversible actions</p>
+  {# ── Stats row ─────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col items-center gap-1">
+      <span class="text-2xl font-bold text-indigo-600">{{ total_sessions }}</span>
+      <span class="text-xs font-medium text-gray-500 uppercase tracking-wide text-center">Sessions</span>
     </div>
-    <div class="px-6 py-4 flex items-center justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-700">Delete account</p>
-        <p class="text-xs text-gray-400 mt-0.5">Permanently delete your account and all data</p>
-      </div>
-      <button type="button" id="btn-delete-account"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5
-                     text-sm font-medium text-red-600 hover:bg-red-50 transition active:scale-95">
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
-        </svg>
-        Delete account
-      </button>
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col items-center gap-1">
+      <span class="text-2xl font-bold text-indigo-600">{{ total_exercises }}</span>
+      <span class="text-xs font-medium text-gray-500 uppercase tracking-wide text-center">Exercises</span>
+    </div>
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col items-center gap-1">
+      {% if total_reps > 0 %}
+        <span class="text-2xl font-bold text-indigo-600">{{ "{:,}".format(total_reps) }}</span>
+        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide text-center">Total Reps</span>
+      {% else %}
+        <span class="text-2xl font-bold text-gray-300">—</span>
+        <span class="text-xs font-medium text-gray-400 uppercase tracking-wide text-center">Total Reps</span>
+      {% endif %}
+    </div>
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-4 flex flex-col items-center gap-1">
+      <span class="text-2xl font-bold text-indigo-600">{{ friend_count }}</span>
+      <span class="text-xs font-medium text-gray-500 uppercase tracking-wide text-center">Friends</span>
     </div>
   </div>
 
-</div>
-
-<!-- Delete confirmation modal -->
-<div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-black/40" id="delete-modal-backdrop"></div>
-  <div class="relative w-full max-w-sm rounded-2xl bg-white shadow-xl border border-gray-200 p-6 space-y-4">
-
-    <div class="flex items-start gap-3">
-      <div class="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
-        <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-        </svg>
-      </div>
-      <div>
-        <h3 class="text-sm font-semibold text-gray-900">Delete account</h3>
-        <p class="mt-1 text-sm text-gray-500">This will permanently delete your account and all sessions, exercises and progress. This cannot be undone.</p>
-      </div>
-    </div>
-
-    <form method="post" action="{{ url_for('routes.delete_account') }}" id="delete-form" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <div class="space-y-3">
+  {# ── Streaks ───────────────────────────────────────────────────────────── #}
+  <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 mb-5">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Streaks</h2>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex items-center gap-3">
+        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.468 5.99 5.99 0 00-1.925 3.547 5.975 5.975 0 01-2.133-1A3.75 3.75 0 0012 18z"/>
+          </svg>
+        </div>
         <div>
-          <label for="confirm_delete_password" class="block text-xs font-medium text-gray-500 mb-1.5">
-            Enter your password to confirm
-          </label>
-          <input id="confirm_delete_password" name="confirm_delete_password" type="password"
-                 autocomplete="current-password" placeholder="••••••••"
-                 class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm
-                        text-gray-900 placeholder:text-gray-400 shadow-sm
-                        focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200 transition">
-          <p id="delete-pw-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-            </svg>
-            <span>Password is required.</span>
+          <p class="text-xl font-bold text-gray-900">{{ current_streak }}
+            <span class="text-sm font-normal text-gray-400">day{% if current_streak != 1 %}s{% endif %}</span>
           </p>
-        </div>
-        <div class="flex gap-2 pt-1">
-          <button type="submit"
-                  class="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white
-                         hover:bg-red-700 transition active:scale-95">
-            Yes, delete everything
-          </button>
-          <button type="button" id="btn-delete-cancel"
-                  class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium
-                         text-gray-600 hover:bg-gray-50 transition active:scale-95">
-            Cancel
-          </button>
+          <p class="text-xs text-gray-500">Current streak</p>
         </div>
       </div>
-    </form>
+      <div class="flex items-center gap-3">
+        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xl font-bold text-gray-900">{{ longest_streak }}
+            <span class="text-sm font-normal text-gray-400">day{% if longest_streak != 1 %}s{% endif %}</span>
+          </p>
+          <p class="text-xs text-gray-500">Longest streak</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-5 mb-5">
+
+    {# ── Top exercises ───────────────────────────────────────────────────── #}
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
+      <h2 class="text-sm font-semibold text-gray-700 mb-4">Top Exercises</h2>
+      {% if top_exercises %}
+        <ol class="space-y-3">
+          {% for ex in top_exercises %}
+            <li class="flex items-center gap-3">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold
+                           flex items-center justify-center">{{ loop.index }}</span>
+              <span class="flex-1 text-sm text-gray-800 font-medium truncate">{{ ex['name'] }}</span>
+              <span class="text-xs text-gray-400 whitespace-nowrap">
+                {% if ex['total_reps'] > 0 %}
+                  {{ "{:,}".format(ex['total_reps']) }} reps
+                {% else %}
+                  {{ fmt_duration(ex['total_seconds']) }}
+                {% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="text-sm text-gray-400 italic">No exercises logged yet.</p>
+      {% endif %}
+    </div>
+
+    {# ── Recent sessions ─────────────────────────────────────────────────── #}
+    <div class="rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
+      <h2 class="text-sm font-semibold text-gray-700 mb-4">Recent Sessions</h2>
+      {% if recent_sessions %}
+        <ul class="space-y-3">
+          {% for s in recent_sessions %}
+            <li class="flex items-start gap-3">
+              <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-indigo-50 flex flex-col items-center
+                          justify-center leading-none">
+                <span class="text-[10px] font-semibold text-indigo-500 uppercase">
+                  {{ s['session_date'][5:7] }}/{{ s['session_date'][8:10] }}
+                </span>
+                <span class="text-[10px] text-indigo-300">{{ s['session_date'][0:4] }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-800 truncate">
+                  {{ s['exercise_names'] or 'Session' }}
+                </p>
+                <p class="text-xs text-gray-400">{{ fmt_session_summary(s['total_reps'], s['total_seconds']) }}</p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if is_own_profile %}
+          <a href="{{ url_for('routes.dashboard') }}"
+             class="mt-4 block text-center text-xs font-medium text-indigo-600 hover:text-indigo-700 transition">
+            View full calendar →
+          </a>
+        {% endif %}
+      {% else %}
+        <p class="text-sm text-gray-400 italic">No sessions yet.</p>
+        {% if is_own_profile %}
+          <a href="{{ url_for('routes.new_session') }}"
+             class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm
+                    font-semibold text-white hover:bg-indigo-700 transition">
+            Log your first session
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
 
   </div>
+
 </div>
 
 {% endblock %}
-
-{% block scripts %}
-<script>
-  // ── Personal details inline edit ─────────────────────────────────────────
-  const btnEdit     = document.getElementById('btn-edit');
-  const btnCancel   = document.getElementById('btn-cancel');
-  const editActions = document.getElementById('edit-actions');
-  const viewMode    = document.getElementById('view-mode');
-  const editMode    = document.getElementById('edit-mode');
-  const form        = document.getElementById('profile-form');
-
-  let origName, origDob, origWeight;
-
-  function enterEditMode() {
-    origName   = document.getElementById('name').value;
-    origDob    = document.getElementById('date_of_birth').value;
-    origWeight = document.getElementById('weight').value;
-    viewMode.classList.add('hidden');
-    editMode.classList.remove('hidden');
-    btnEdit.classList.add('hidden');
-    editActions.classList.remove('hidden');
-    editActions.classList.add('flex');
-  }
-
-  function exitEditMode() {
-    viewMode.classList.remove('hidden');
-    editMode.classList.add('hidden');
-    btnEdit.classList.remove('hidden');
-    editActions.classList.add('hidden');
-    editActions.classList.remove('flex');
-    document.getElementById('name-error').classList.add('hidden');
-    document.getElementById('name').classList.remove('border-red-400');
-    document.getElementById('name').classList.add('border-gray-300');
-  }
-
-  btnEdit.addEventListener('click', enterEditMode);
-
-  btnCancel.addEventListener('click', () => {
-    document.getElementById('name').value = origName;
-    document.getElementById('date_of_birth').value = origDob;
-    document.getElementById('weight').value = origWeight;
-    const dob = document.getElementById('date_of_birth');
-    dob.classList.toggle('text-gray-400', !dob.value);
-    dob.classList.toggle('text-gray-900', !!dob.value);
-    exitEditMode();
-  });
-
-  form.addEventListener('submit', function (e) {
-    const nameInput = document.getElementById('name');
-    const nameError = document.getElementById('name-error');
-    if (!nameInput.value.trim()) {
-      nameError.classList.remove('hidden');
-      nameInput.classList.add('border-red-400');
-      nameInput.classList.remove('border-gray-300');
-      e.preventDefault();
-    } else {
-      nameError.classList.add('hidden');
-      nameInput.classList.remove('border-red-400');
-      nameInput.classList.add('border-gray-300');
-    }
-  });
-
-  // ── Password inline edit ─────────────────────────────────────────────────
-  const pwView      = document.getElementById('pw-view');
-  const pwEdit      = document.getElementById('pw-edit');
-  const btnPwEdit   = document.getElementById('btn-pw-edit');
-  const btnPwCancel = document.getElementById('btn-pw-cancel');
-  const pwForm      = document.getElementById('pw-form');
-  const pwError     = document.getElementById('pw-error');
-  const pwErrorText = document.getElementById('pw-error-text');
-
-  function showPwError(msg) {
-    pwErrorText.textContent = msg;
-    pwError.classList.remove('hidden');
-  }
-  function hidePwError() {
-    pwError.classList.add('hidden');
-  }
-
-  btnPwEdit.addEventListener('click', () => {
-    pwView.classList.add('hidden');
-    pwEdit.classList.remove('hidden');
-    document.getElementById('current_password').focus();
-  });
-
-  btnPwCancel.addEventListener('click', () => {
-    pwView.classList.remove('hidden');
-    pwEdit.classList.add('hidden');
-    pwForm.reset();
-    hidePwError();
-  });
-
-  pwForm.addEventListener('submit', function (e) {
-    const current = document.getElementById('current_password').value;
-    const newPw   = document.getElementById('new_password').value;
-    const confirm = document.getElementById('confirm_password').value;
-    if (!current || !newPw || !confirm) {
-      showPwError('All password fields are required.'); e.preventDefault(); return;
-    }
-    if (newPw.length < 8) {
-      showPwError('New password must be at least 8 characters.'); e.preventDefault(); return;
-    }
-    if (newPw !== confirm) {
-      showPwError('New passwords do not match.'); e.preventDefault(); return;
-    }
-    hidePwError();
-  });
-
-  // ── Delete account modal ─────────────────────────────────────────────────
-  const deleteModal    = document.getElementById('delete-modal');
-  const btnDeleteOpen  = document.getElementById('btn-delete-account');
-  const btnDeleteClose = document.getElementById('btn-delete-cancel');
-  const deleteBackdrop = document.getElementById('delete-modal-backdrop');
-  const deleteForm     = document.getElementById('delete-form');
-  const deletePwError  = document.getElementById('delete-pw-error');
-
-  function openDeleteModal() {
-    deleteModal.classList.remove('hidden');
-    document.getElementById('confirm_delete_password').focus();
-  }
-  function closeDeleteModal() {
-    deleteModal.classList.add('hidden');
-    deleteForm.reset();
-    deletePwError.classList.add('hidden');
-  }
-
-  btnDeleteOpen.addEventListener('click', openDeleteModal);
-  btnDeleteClose.addEventListener('click', closeDeleteModal);
-  deleteBackdrop.addEventListener('click', closeDeleteModal);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDeleteModal(); });
-
-  deleteForm.addEventListener('submit', function (e) {
-    const pw = document.getElementById('confirm_delete_password').value;
-    if (!pw) {
-      deletePwError.classList.remove('hidden');
-      e.preventDefault();
-    } else {
-      deletePwError.classList.add('hidden');
-    }
-  });
-</script>
-{% endblock %}
-
-
 
 

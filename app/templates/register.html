@@ -39,6 +39,22 @@
                 </p>
               </div>
 
+              <!-- Username -->
+              <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username <span class="text-red-500">*</span></label>
+                <input id="username" name="username" type="text" autocomplete="username"
+                       placeholder="e.g. john_doe"
+                       value="{{ form_username | default('') }}"
+                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
+                              text-gray-900 placeholder:text-gray-400 shadow-sm
+                              focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
+                <p class="mt-1 text-xs text-gray-400">3–30 chars, letters, digits, _ - . No spaces.</p>
+                <p id="username-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                  <span id="username-error-text">Username is required.</span>
+                </p>
+              </div>
+
               <!-- Password -->
               <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
@@ -87,17 +103,16 @@
 
             <!-- Name -->
             <div>
-              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+              <label for="name" class="flex items-center gap-2 mb-1">
+                <span class="text-sm font-medium text-gray-700">Full Name</span>
+                <span class="text-xs font-normal text-gray-400">— optional</span>
+              </label>
               <input id="name" name="name" type="text" autocomplete="name"
                      placeholder="Ivan Ivanov"
                      value="{{ form_name | default('') }}"
                      class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm
                             text-gray-900 placeholder:text-gray-400 shadow-sm
                             focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition">
-              <p id="name-error" class="hidden mt-1.5 flex items-center gap-1.5 text-sm text-red-700">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-                <span>Name is required.</span>
-              </p>
             </div>
 
             <!-- Date of Birth -->
@@ -200,6 +215,19 @@
       hideError('email-error'); setInputError('email', false);
     }
 
+    // Username
+    const username = document.getElementById('username').value.trim();
+    const usernameRe = /^[a-zA-Z0-9_.\-]{3,30}$/;
+    if (!username) {
+      document.getElementById('username-error-text').textContent = 'Username is required.';
+      showError('username-error'); setInputError('username', true); valid = false;
+    } else if (!usernameRe.test(username)) {
+      document.getElementById('username-error-text').textContent = 'Username may only contain letters, digits, _, - and . (no spaces).';
+      showError('username-error'); setInputError('username', true); valid = false;
+    } else {
+      hideError('username-error'); setInputError('username', false);
+    }
+
     // Password
     const password = document.getElementById('password').value;
     if (!password) {
@@ -220,13 +248,6 @@
       hideError('confirm-password-error'); setInputError('confirm_password', false);
     }
 
-    // Name
-    const name = document.getElementById('name').value.trim();
-    if (!name) {
-      showError('name-error'); setInputError('name', true); valid = false;
-    } else {
-      hideError('name-error'); setInputError('name', false);
-    }
 
     // Sex
     const sexChosen = document.querySelector('input[name="sex"]:checked');

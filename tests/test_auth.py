@@ -48,7 +48,10 @@ def test_register_rejects_invalid_email(client):
         "/register",
         data={
             "email": "not-an-email",
+            "username": "testuser",
             "password": "secret12",
+            "confirm_password": "secret12",
+            "sex": "male",
             "csrf_token": csrf_token,
         },
         follow_redirects=True,

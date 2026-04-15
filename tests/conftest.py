@@ -42,7 +42,12 @@ def db(app):
 
 
 def register(
-    client, email="u@example.com", password="secret12", name="Test User", sex="male"
+    client,
+    email="u@example.com",
+    password="secret12",
+    name="Test User",
+    sex="male",
+    username="testuser",
 ):
     csrf_token = get_csrf_token(client, "/register")
     return client.post(
@@ -53,6 +58,7 @@ def register(
             "confirm_password": password,
             "name": name,
             "sex": sex,
+            "username": username,
             "csrf_token": csrf_token,
         },
         follow_redirects=True,
@@ -63,7 +69,7 @@ def login(client, email="u@example.com", password="secret12"):
     csrf_token = get_csrf_token(client, "/login")
     return client.post(
         "/login",
-        data={"email": email, "password": password, "csrf_token": csrf_token},
+        data={"login": email, "password": password, "csrf_token": csrf_token},
         follow_redirects=True,
     )
 

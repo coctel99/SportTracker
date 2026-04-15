@@ -11,9 +11,14 @@ class DuplicateEmailError(Exception):
     """Raised when trying to register an e-mail that already exists."""
 
 
+class DuplicateUsernameError(Exception):
+    """Raised when trying to register a username that already exists."""
+
+
 def register_user(
     email: str,
     password: str,
+    username: str,
     name: str | None = None,
     date_of_birth: str | None = None,
     sex: str | None = None,
@@ -23,13 +28,20 @@ def register_user(
 
     Raises:
         DuplicateEmailError: if the e-mail is already taken.
+        DuplicateUsernameError: if the username is already taken.
     """
     db = get_db()
+    # Check uniqueness separately for better error messages
+    if db.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
+        raise DuplicateEmailError(email)
+    if db.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone():
+        raise DuplicateUsernameError(username)
     try:
         db.execute(
-            "INSERT INTO users (email, password_hash, name, date_of_birth, sex, weight) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO users (email, username, password_hash, name, date_of_birth, sex, weight) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 email,
+                username,
                 generate_password_hash(password),
                 name or None,
                 date_of_birth or None,
@@ -42,10 +54,19 @@ def register_user(
         raise DuplicateEmailError(email)
 
 
-def authenticate_user(email: str, password: str):
-    """Return the user row if credentials are valid, else None."""
+def authenticate_user(login: str, password: str):
+    """Return the user row if credentials are valid, else None.
+
+    *login* may be an email address or a username (case-insensitive).
+    """
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    login_lower = login.strip().lower()
+    # Try email first, then username
+    user = db.execute("SELECT * FROM users WHERE email = ?", (login_lower,)).fetchone()
+    if user is None:
+        user = db.execute(
+            "SELECT * FROM users WHERE LOWER(username) = ?", (login_lower,)
+        ).fetchone()
     if user is None or not check_password_hash(user["password_hash"], password):
         return None
     return user

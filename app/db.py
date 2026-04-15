@@ -11,12 +11,23 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
+  username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   name TEXT,
   date_of_birth TEXT,
   sex TEXT CHECK (sex IN ('male', 'female')),
   weight REAL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS friends (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  friend_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, friend_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
@@ -91,6 +102,7 @@ def migrate_db():
         row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()
     }
     user_migrations = [
+        ("username", "ALTER TABLE users ADD COLUMN username TEXT"),
         ("name", "ALTER TABLE users ADD COLUMN name TEXT"),
         ("date_of_birth", "ALTER TABLE users ADD COLUMN date_of_birth TEXT"),
         (
@@ -102,6 +114,35 @@ def migrate_db():
     for col, sql in user_migrations:
         if col not in existing_users:
             conn.execute(sql)
+
+    # Back-fill username from email prefix for any existing rows that have NULL
+    conn.execute("""
+        UPDATE users
+        SET username = (
+            WITH base AS (
+                SELECT LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) AS raw
+            ),
+            cleaned AS (
+                SELECT REPLACE(REPLACE(REPLACE(raw, ' ', '_'), '+', '_'), '.', '_') AS u
+                FROM base
+            )
+            SELECT u FROM cleaned
+        )
+        WHERE username IS NULL
+    """)
+
+    # Create friends table if it doesn't exist
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS friends (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          friend_id INTEGER NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, friend_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
 
     existing_exercises = {
         row[1] for row in conn.execute("PRAGMA table_info(exercises)").fetchall()
